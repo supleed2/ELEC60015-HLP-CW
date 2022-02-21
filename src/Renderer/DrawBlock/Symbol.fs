@@ -87,6 +87,14 @@ let posOf x y = {X=x;Y=y}
 
 
 // ----- helper functions for titles ----- //
+//STransform Finite State Machine
+let stransform_fsm(prev_state:int):int =
+    match prev_state with
+    | 0 -> 1
+    | 1 -> 2
+    | 2 -> 3
+    | 3 -> 0
+    | _ -> 0 // In case it doesn't work maintain original rotation
 
 ///Insert titles compatible with greater than 1 buswidth
 let title t (n) =  
@@ -934,8 +942,8 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
         let newSymbols = 
             // if ctrl is pressed make yellow initially, then try to change STransform for every time ctrl+R is pressed
             List.fold (fun prevSymbols sId ->
-                Map.add sId {model.Symbols[sId] with STransform = model.Symbols[sId].STransform + 1} prevSymbols) resetSymbols compList
-        printf "Rotated"
+                Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(model.Symbols[sId].STransform)} prevSymbols) resetSymbols compList
+        printf "Rotated %A" model.Symbols[compList[0]].STransform
         { model with Symbols = newSymbols }, Cmd.none
         
     | ErrorSymbols (errorCompList,selectCompList,isDragAndDrop) -> 
