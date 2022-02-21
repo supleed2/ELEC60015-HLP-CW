@@ -3,6 +3,8 @@ This module draws schematics component symbols. Each symbol is associated with a
 *)
 
 module Symbol
+open Electron
+open ElectronAPI
 open Fable.React
 open Fable.React.Props
 open Elmish
@@ -19,6 +21,7 @@ let GridSize = 30
 type Symbol =
     {
         Pos: XYPos
+        STransform: int // Describes how symbol is rotated/flipped (0 -> 0 deg, 1 -> 90 deg, 2 -> 180 deg, -> 3 -> 270 deg).
         InWidth0: int option
         InWidth1: int option
         Id : ComponentId       
@@ -29,6 +32,11 @@ type Symbol =
         Opacity: float
         Moving: bool
     }
+
+type PortOrientation = {
+    side: int // Designated which side of symbol port is on (0 -> right, 1 -> top, 2 -> left, 3 -> bottom). to have coherency with STransform.
+}
+
 
 type Model = {
     Symbols: Map<ComponentId, Symbol>
@@ -53,6 +61,7 @@ type Msg =
     | MoveSymbols of compList: ComponentId list * move: XYPos
     | ShowPorts of ComponentId list
     | SelectSymbols of ComponentId list// Issie interface
+    | RotateSymbols of ComponentId list //First Attempt at implementing a way to rotate symbol. 
     | SymbolsHaveError of sIds: ComponentId list
     | ChangeLabel of sId : ComponentId * newLabel : string
     | PasteSymbols of sIds: ComponentId list
@@ -248,6 +257,7 @@ let createNewSymbol (pos: XYPos) (comptype: ComponentType) (label:string) =
     let comp = makeComp pos comptype id label
     { 
       Pos = { X = pos.X - float comp.W / 2.0; Y = pos.Y - float comp.H / 2.0 }
+      STransform = 0;
       ShowInputPorts = false
       ShowOutputPorts = false
       InWidth0 = None // set by BusWire
@@ -919,6 +929,15 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
             (List.fold (fun prevSymbols sId -> Map.add sId {resetSymbols[sId] with Colour = "lightgreen"} prevSymbols) resetSymbols compList)
         { model with Symbols = newSymbols }, Cmd.none  
 
+    | RotateSymbols compList -> //select a symbol to Rotate
+        let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
+        let newSymbols = 
+            // if ctrl is pressed make yellow initially, then try to change STransform for every time ctrl+R is pressed
+            List.fold (fun prevSymbols sId ->
+                Map.add sId {model.Symbols[sId] with STransform = model.Symbols[sId].STransform + 1} prevSymbols) resetSymbols compList
+        printf "Rotated"
+        { model with Symbols = newSymbols }, Cmd.none
+        
     | ErrorSymbols (errorCompList,selectCompList,isDragAndDrop) -> 
         let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
         let selectSymbols =
@@ -983,6 +1002,7 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
                                                 comp.H, comp.W
                                         ComponentId comp.Id,
                                         { Pos = xyPos
+                                          STransform = 0
                                           ShowInputPorts = false //do not show input ports initially
                                           ShowOutputPorts = false //do not show output ports initially
                                           Colour = "lightgrey"     // initial color 

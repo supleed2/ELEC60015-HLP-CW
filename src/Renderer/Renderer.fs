@@ -148,6 +148,8 @@ let viewMenu dispatch =
         makeItem "Diagram Zoom Out" (Some "Shift+-") (fun ev -> dispatch Sheet.KeyboardMsg.ZoomOut)
         makeItem "Diagram Zoom to Fit" (Some "CmdOrCtrl+W") (fun ev -> dispatch Sheet.KeyboardMsg.CtrlW)
         menuSeparator
+        makeItem "Rotate Symbol" (Some "Shift+R") (fun ev -> dispatch Sheet.KeyboardMsg.Rotate)
+        menuSeparator
         makeCondItem (JSHelpers.debugLevel <> 0) "Toggle Dev Tools" (Some devToolsKey) (fun _ -> 
             renderer.ipcRenderer.send("toggle-dev-tools", [||]) |> ignore)
     ]
