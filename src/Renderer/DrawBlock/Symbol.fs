@@ -18,6 +18,10 @@ open System.Text.RegularExpressions
 let GridSize = 30 
 
 /// ---------- SYMBOL TYPES ---------- ///
+type PortOrientationOffset = {
+    Side: int // Designated which side of symbol port is on (0 -> right, 1 -> top, 2 -> left, 3 -> bottom). to have coherency with STransform.
+    Offset: XYPos //Offset from top left corver of symbol, no matter orientation
+}
 type Symbol =
     {
         Pos: XYPos
@@ -31,11 +35,9 @@ type Symbol =
         ShowOutputPorts: bool
         Opacity: float
         Moving: bool
+        APortOffsetsMap: Map<string,PortOrientationOffset>
     }
 
-type PortOrientation = {
-    side: int // Designated which side of symbol port is on (0 -> right, 1 -> top, 2 -> left, 3 -> bottom). to have coherency with STransform.
-}
 
 
 type Model = {
@@ -95,6 +97,22 @@ let stransform_fsm(prev_state:int):int =
     | 2 -> 3
     | 3 -> 0
     | _ -> 0 // In case it doesn't work maintain original rotation
+
+// Function to generate Port Positions of each port from Symbol Location and Orientation
+//currentSymbol.Pos is the upper left side corner
+// Input:  Symbol -> Take APortOffset map with string name of port
+// Output: Map    -> Return map of port string as key and XYPos
+let genPortPos (currentSymbol:Symbol) : Map<string,XYPos> =
+    let ri_to_universal (riCoor:PortOrientationOffset) : XYPos =
+        {
+            X = currentSymbol.Pos.X + riCoor.Offset.X
+            Y = currentSymbol.Pos.Y + riCoor.Offset.Y
+        }
+    currentSymbol.APortOffsetsMap
+    |> Map.toList
+    |> List.map (fun (str:String,pos) -> ((str:String), ri_to_universal(pos)))
+    |> Map.ofList
+
 
 ///Insert titles compatible with greater than 1 buswidth
 let title t (n) =  
@@ -202,7 +220,7 @@ let customToLength (lst : (string * int) list) =
 // helper function to initialise each type of component
 let makeComp (pos: XYPos) (comptype: ComponentType) (id:string) (label:string) : Component =
 
-    // function that helps avoid dublicate code by initialising parameters that are the same for all component types and takes as argument the others
+    // function that helps avoid duplicate code by initialising parameters that are the same for all component types and takes as argument the others
     let makeComponent (n, nout, h, w) label : Component=  
         {
             Id = id 
@@ -275,6 +293,7 @@ let createNewSymbol (pos: XYPos) (comptype: ComponentType) (label:string) =
       Compo = comp
       Opacity = 1.0
       Moving = false
+      APortOffsetsMap = Map.empty<string,PortOrientationOffset>
     }
 
 // Function to add ports to port model     
@@ -519,8 +538,10 @@ let view (model : Model) (dispatch : Msg -> unit) =
 //------------------------GET BOUNDING BOXES FUNCS--------------------------------used by sheet.
 // Function that returns the bounding box of a symbol. It is defined by the height and the width as well as the x,y position of the symbol
 let getBoundingBoxofSymbol (sym:Symbol): BoundingBox =
-    {X = float(sym.Pos.X) ; Y = float(sym.Pos.Y) ; H = float(sym.Compo.H) ; W = float(sym.Compo.W)}
-
+    match sym.STransform with
+    | 0 | 2 -> {X = float(sym.Pos.X) ; Y = float(sym.Pos.Y) ; H = float(sym.Compo.H) ; W = float(sym.Compo.W)}
+    | 1 | 3 -> {X = float(sym.Pos.X) ; Y = float(sym.Pos.Y) ; H = float(sym.Compo.W) ; W = float(sym.Compo.H)} // For bounding box changes with rotate.
+    | _ -> failwithf"STransform value not implemented"
 let getBoundingBoxes (symModel: Model): Map<ComponentId, BoundingBox> =
     Map.map (fun sId (sym:Symbol) -> (getBoundingBoxofSymbol sym)) symModel.Symbols
     
@@ -943,7 +964,7 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
             // if ctrl is pressed make yellow initially, then try to change STransform for every time ctrl+R is pressed
             List.fold (fun prevSymbols sId ->
                 Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(model.Symbols[sId].STransform)} prevSymbols) resetSymbols compList
-        printf "Rotated %A" model.Symbols[compList[0]].STransform
+        printf "Rotated %A" model.Symbols[compList[0]].Pos
         { model with Symbols = newSymbols }, Cmd.none
         
     | ErrorSymbols (errorCompList,selectCompList,isDragAndDrop) -> 
@@ -959,7 +980,7 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
             (List.fold (fun prevSymbols sId -> Map.add sId {resetSymbols[sId] with Colour = "Red"} prevSymbols) selectSymbols errorCompList)
         { model with Symbols = newSymbols }, Cmd.none 
         
-    | MouseMsg _ -> model, Cmd.none // allow unused mouse messags
+    | MouseMsg _ -> model, Cmd.none // allow unused mouse messages
 
     | ChangeLabel (sId, newLabel) ->
         let tempsym = Map.find sId model.Symbols
@@ -1020,6 +1041,7 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
                                           Moving = false
                                           InWidth0 = None
                                           InWidth1 = None
+                                          APortOffsetsMap = Map.empty<string,PortOrientationOffset>
                                         }
                                         ))
         let symbolList =
