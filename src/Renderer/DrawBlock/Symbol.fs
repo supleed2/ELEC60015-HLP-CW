@@ -113,6 +113,17 @@ let genPortPos (currentSymbol:Symbol) : Map<string,XYPos> =
     |> List.map (fun (str:String,pos) -> ((str:String), ri_to_universal(pos)))
     |> Map.ofList
 
+//Map to return new coordinates of Position of ports and symbol
+let rotatePortMap (map:Map<String,PortOrientationOffset>) (symbol:Symbol) = 
+    map |> Map.map(fun key port ->
+        match port.Side with
+        | 0 -> {Side=1; Offset= {X= port.Offset.Y; Y=port.Offset.X}}
+        | 1 -> {Side=2; Offset= {X= 0.0; Y= port.Offset.X}}
+        | 2 -> {Side=3; Offset= {X= port.Offset.Y; Y= port.Offset.X}}
+        | 3 -> {Side=0; Offset= {X= float(symbol.Compo.W); Y= port.Offset.X}}
+        | _ -> {Side=0; Offset= {X= port.Offset.X; Y=port.Offset.Y}}                            
+        )
+
 
 ///Insert titles compatible with greater than 1 buswidth
 let title t (n) =  
@@ -963,8 +974,8 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
         let newSymbols = 
             // if ctrl is pressed make yellow initially, then try to change STransform for every time ctrl+R is pressed
             List.fold (fun prevSymbols sId ->
-                Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(model.Symbols[sId].STransform)} prevSymbols) resetSymbols compList
-        printf "Rotated %A" model.Symbols[compList[0]].Pos
+                Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(model.Symbols[sId].STransform); APortOffsetsMap = rotatePortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
+        printf "Rotated %A" Map.toList (model.Symbols[compList[0]].APortOffsetsMap)
         { model with Symbols = newSymbols }, Cmd.none
         
     | ErrorSymbols (errorCompList,selectCompList,isDragAndDrop) -> 
