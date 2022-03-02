@@ -4,7 +4,7 @@
 
 [Team Contribution Doc](https://github.com/tomcl/hlp22docs/blob/main/Team6.md)
 
-[BusWire (Section 1)](src/Renderer/DrawBlock/BusWire.fs)
+[BusWire (Section 1)](src/Renderer/DrawBlock/BusWire.fs#L224-L624)
 
 Section 1 is lines 224 - 624 indicated using `/// ad3919 code ///`
 
@@ -89,27 +89,14 @@ Section 1 is lines 224 - 624 indicated using `/// ad3919 code ///`
 
 ## Analysis
 
-### Issues in Existing Code
+### Bad Functions in Existing Code
 
-#### Bad Function list
-
+- [inferDirectionfromVertices](src/Renderer/DrawBlock/BusWire.fs#L285)
+  - Uses Orientation (`Horizontal` or `Vertical`) to represent whether wire is of 3 or 5 segment type, confusing when trying to understand the function
 - segmentIntersectsSegment
   - Has separate functions `orientation` and `onSegment` which are not used anywhere else
     - Both of these require the comments to understand
   - Hard to follow flow as there are many similar lines with names that are too short to understand easily
   - Rewritten: [segmentIntersectsSegment](src/Renderer/DrawBlock/BusWire.fs#L390)
-
-TODO: 2 more bad functions
-
-
-* if function is poorly documented say why this is necessary (what is not obvious from a good name + 
-* parameter names + types).
-* if function has bad name say why this is confusing
-* if a function is poorly written indicate what rewriting would improve this (briefly). You can 
-refer to your code if this helps.
-
-#### Other problems
-
-State **concisely** Issues with existing code, or in refactoring for new types, that do not fit into per function list. 
-Again numbered points, at most 3. Choose the most important if you have too much to say. You can should
-refer to documentation (not XML docs) in code where this helps.
+- renderSegment
+  - Uses cons `::` operator unnecessarily in construction of ReactElement lists
