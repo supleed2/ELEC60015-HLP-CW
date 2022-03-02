@@ -1,118 +1,25 @@
 # Example README for individual code submission
 
-## Instructions
-
-* This file should be submitted (changed) on branch `hlp22-indiv-assess-<login>` of either your own repo or your group repo
-   * replace `<login>` in filename `README-<login>.md` by your login - in his example `<login> = tomcl`
-   * name the branch as above, including your login. This branch is used only for your submission.
-* A link to the repo and branch must be on the `indiv` sheet of Tom Clarke's Team [google spreadsheet](https://docs.google.com/spreadsheets/d/1prQ5usnpu36FgtbsMO8j6_mwbdd34haSMOQKN2OkLBA/edit?usp=sharing)
-* The repo you use **must have your marker added as collaborator** (github login is on indiv assessment spreadsheet page)
-* Delete these instructions from your version of this readme
-* Delete my comments from your version of the readme (it is an example, not something you add lines to). 
-Keep the headings and **replace the admin section links and notes with correct ones**.
-* Link to the sourcefile your code is contained in (drawblock or symbol) with an absolute hyperlink 
-to your repo and branch
-* Specify which code section and file you are doing as in my ppt (1,2,3), (buswire,symbol)
-* Add any changes to my section code allocations. This must be consistent with what has been 
-recorded in your team's file in my Team contributions repo](https://github.com/tomcl/hlp22docs/blob/main/README.md)  
-main branch ./TeamN.md (N = 1 - 9) file. The team contrib repo is as official record. This file will be 
-used marking and should have line numbers for easy access. Expect to be marked down if your marker
-cannot easily find everything via links from this README.
-
-## Team Shared Team.md
-
-[Team Contribution Repo](https://github.com/tomcl/hlp22docs/blob/main/README.md)
-
-* A file in this repo file is common to the team contains who is responsible for which parts of code
-* Fork and clone it
-* Any team member can make agreed by team commits. First commit before Wed 23 Fen 16:00. 
-* Changes in who does what are recorded by altering list of functions AND 
-as extra lines in this file. See sample file in [README](https://github.com/tomcl/hlp22docs/blob/main/README.md)
-
 ## Admin and quick access links
 
 *link to your teamN.md file*
-[Common repo TeamN file](https://github.com/tomcl/hlp22docs/blob/main/README.md)
+[Common repo Team 6 file](https://github.com/tomcl/hlp22docs/blob/main/Team6.md)
 
-[Buswire (section 3)](src/renderer/drawblock/buswire.fs)
+Link to altered files:  
+* [Symbol (Section 2)](src/Renderer/DrawBlock/Symbol.fs)  
+* [Sheet (Section 2)](src/Renderer/DrawBlock/Sheet.fs)  
+* [Renderer (Section 2)](src/Renderer/Renderer.fs)  
 
-Section 3 on my file is lines : 700-1100
-I am also responsible for lines 100-120 (functions mySplurgeFunc, my2ndSplurgeFunc)
-
-Anything else you need to say about what you are or are not responsible for.
-
-## Code partitioning notes (don't copy this section in your submitted README - delete it)
-
-Insert clear comments in the source files indicating where each person's code starts and stops
-
-```
-//---------------------------------------------------------------------------------//
-//--------------------TJWC CODE SECTION STARTS-------------------------------------//
-//---------------------------------------------------------------------------------//
-```
-
-### Separating code into 3 modules (in different files)
-
-Groups can - **if they wish** - modularise their buswire or symbol files into 2 or 3 modules in separate files
-
-1. Symbol1
-2. Symbol2
-3. Symbol3
-
-With each module referencing the ones before with `open`. 
-
-A top-level module `Symbol` or `BusWire` after these three must contain functions exported anywhere outside symbol so that
-references in the rest of the code still work.
-
-```
-Symbol.fs
-
-let interface1 = Symbol1.interface1
-let interface2 = Symbol1.Interface2
-let interface3 = Symbol2.interface3
-```
-
-### Submodules within one file
-
-Less dramatic, but still useful for modularity. Groups can - **if they wish** - modularise their buswire or symbol files into 3 submodules inside the existing file
-
-```
-Symbol.fs
-
-module symbol1 =
-    let symbol1defn = ...
-
-module symbol2
-    open symbol1
-    let symbol2defn
-
-module symbol3 =
-    open symbol1
-    open symbol2
-    let symbol3 defn = 
-```
-
-Again you will need to mend references - because open Symbol in some other part of Issie would need to become open Symbol.Symbol1, open Symbol.Symbol2 etc to pick up exported code in the submodules. you can add exports to Symbol.fs outside the three submodules as
-when each moduel is in separate files.
-
-## Note on assessment
-
-The aim of assessment if that the first two sections should be fairly straightforward and demonstrate basic knowledge
-of how to write FP code. They can achieve overall marks up to 70% without extension work. Those working on 
-significant  extensions should put extra effort into these and not complex analysis section since the 
-analysis marks can accept well-written code supporting extensions as evidence of understanding. 
-The aim of this is so that you get marks for good code, 
-if you can write signiifcant good code without being motivated to write reports.
-
-There are signiifcant differences between different code sections, and also things which 
-change dependning on what your base types are and how ambitious your code rewrite it. Ask early
-if you are concerned about how this assessment will impact you. There will be ways to reward code 
-writing which can be found if need be in individual cases.
+I am responsible for making the following changes in my code:
+* __Symbol.fs:__ Lines : 718-1315 (Section 2) and Lines : 97-102 (stransform_fsm) 
+  - Includes changes to existing code for Section 2 and new functions implementing the extensions.
+* __Sheet.fs:__ Lines 86, 859-863 (Extensions)
+  - Includes changes required to make extensions for rotation work.
+* __Renderer.fs:__ Lines 151 (Extensions)
+  - Includes changes required to make extensions for UI rotation work.
 
 ## Code Quality
-
-This will be assessed based on the code. You can **but do not have to** highlight here things you are particularly proud of and want markers to look at (up to 3) as short bullet points:
-
+Things to note:
 * Naming of `myGoodName`, `myWonderfulLongName`
 * New function boundaries: `topfun` -> `firstfun`, `topfun` -> `secondFun`
 * New types: MyGoodType
@@ -123,72 +30,109 @@ Your code will all be assessed anyway, so this is optional.
 
 ## Analysis
 
-This combines analysis of **issues in existing code** with **proof or analysis of how/why the new code works**. 
-The marking combines both parts. If new code already works and is well written (especially if it is 
-demonstrated to have significant value in terms of ability to support extensions (see Extensions below)
-less evidence will be needed for a high mark in this section.
-The analysis here demonstrates that you understand the problems in the old code. 
-If the old code has no or few problems you can say this.
+### Types
+_The types decided in the first part of Symbol.fs were `STransform` of type `Rotation` and `PortOrientationOffset` of type {`PortOrientation`,`Offset`} each with its four possible cases to be used to describe
+the different rotations fo the symbol and the side of the symbol its ports are at each rotation._
+_`APortOffsetsMap` of type `Map<string,PortOrientationOffset>` was used to describe the port locations relative to the top left corner of the symbol.
+This map uses string keys `I0..IN` and `O0..ON` to correctly distinguish and store the input and output port offsets in the map._
 
-Anything you say here may if necessary be tested in the 5 min feedback interview to check understanding.
+### Changes to pre-existing code
 
-### Issues in Existing Code
 
-#### Bad Function list
+Overall small changes were made to the pre-existing code, as the main focus was the correct implementation
+of the extensions and symbol enhancements and to ensure their full functionality.
 
-List any problems with the existing code **concisely**  as numbered points one function per point. State why
-the problem exists. List only functions with **significant problems**. You can should refer to XML comments 
-in your refactored code where this helps. You may note the worst 3 functions even if they have problems that are not
-significant.
+Minor changes were made by removing unnecessary parentheses adding comments where necessary and refactoring the code where unnecessary arguments were passed to functions.  
 
-* if function is poorly documented say why this is necessary (what is not obvious from a good name + 
-* parameter names + types).
-* if function has bad name say why this is confusing
-* if a function is poorly written indicate what rewriting would improve this (briefly). You can 
-refer to your code if this helps.
 
-#### Other problems
+#### changeLsbf, changeConstantf
+Renamed to changeLSBbits and changeConstant respectively to avoid confusion of f being regarded as using an input of type float.
 
-State **concisely** Issues with existing code, or in refactoring for new types, that do not fit into per function list. 
-Again numbered points, at most 3. Choose the most inmportant if you have too much to say. You can should
-refer to documentation (not XML docs) in code where this helps.
+#### createCustomPortNamesMap
+Removed parantheses and unnecessary use of input parameter n, as it wasn't used and so that it wasn't required when used.
+
+#### getInputPortsPositionMap, getOutputPortsPositionMap,getPortLocations, getInputPortLocation, getOutputPortLocation
+Since getInputPortsPositionMap, getOutputPortsPositionMap are now using getGlobalPortPos which is explained later on in the Extensions section the input parameter of model is not required but only the Symbol list.
+Therefore, to avoid confusion and improve readability it was removed as a parameter and as input to the following function addressed above.
+
+Apart from these changes the main focus was targeted at the Extensions of this Section due to their importance.
 
 ### Analysis of how/why code works
+The code described below are the fully working implemented Symbol - enhancements for the Individual Coding of Section 2 ([Project Spec: Slide 6](https://intranet.ee.ic.ac.uk/t.clarke/hlp/lectures/project22-spec.pdf))
 
-This section need not contain analysis if the code can be demonstarted working. In 
-that case list as bullet points the features you will demonstarte (quickly) in the 5 min
-interview.
-
-* If code works fully and can be demonstrated in the 5 minute feedback interview no analysis is needed. 
-* If code will be manually tested in interview say what the tests are that supplement your analysis
-* Interview code must be the assessed branch (not something else, or using later group code)
-* A good way to show code works is to explain how it differs from existing working code and how existing
-functionality is preserved.
+The code demonstrated in the 5 minute feedback will be to:
+* Show different UI implementations to perform rotation for each symbol.
+* Show how ports on different symbols are mapped with rotation to the different sides of the symbol.
+* Show how the wiring between symbols is also altered with each rotation.
+* Show that the bounding box of each symbol changes with each rotation for each symbol.
 
 # Extensions
+## 1. Locate port position and orientation, given symbol position and orientation
+### Changes in files:
+  - __Symbol.fs__
+    - `743-748`canvasPortLocation
+    - `753-761` getGlobalPortPos
 
-Extensions are required for mark > 70 and optional for mark below 70. High marks on 
-the first two sections cannot boost extensions mark if this is lower than them.
+### Explanation:
+Functions `canvasPortLocation` and `getGlobalPortPos` were created to produce the "Global" Coordinates of the ports
+for each symbol at any given rotation and position. `canvasPortLocation` extracts the `APortOffsetsMap` of the specified
+symbol and returns a list of the global XYPos ports of the symbol by combining the offsets with the top-left corner of the symbol.
+These coordinates are shown by toggling Developer tools in Issie and are outputted every time a selected symbol is rotated
+showing its global coordinates in the order described in Types. Keep in mind the coordinates shown are those before the symbol is rotated.  
+Similar to `canvasPortLocation`, `getGlobalPortPos` is used to generate the "Global" XYPos of a specified Port on the Canvas
+given the port and symbol specified. Since, the `APortOffset` map and `STransform` are part of the Symbol type, the entire symbol is passed to the function,
+rather than these separately. After categorizing the port passed to the function as type input or output, the appropriate index of the port is extracted
+and is used as a key to extract the correct coordinates of the port to display and to be used by buswire.fs. Since the `APortOffsetMap` is updated
+at every rotation (discussed in later extensions), `getGlobalPortPos` will always receive a new `APortOffsetMap` at every orientation and thus
+not require the current orientation as input. This can be tested by rotating a symbol and connecting another symbol's ports to its ports.
+It can be observed that the gray circles used to distinguish which ports connection can be made are correctly displayed on the rotated symbol, and
+the buswire correctly connects to that rotated port location. However, two issues seem to arise. The wire is connected parallel to the
+port, if the symbol is rotated as the `buswire.fs` is expecting the symbol to be non-rotated. Additionally, the `buswire.fs` seems to only
+update when the symbol is moved. As a result, a communication between the rotations and orientations of the symbol need to be passed
+to `buswire.fs` to ensure that the wires are correctly displayed during rotation. This will be done later on in the group work.
 
-$baseMark = \min (70, code * 20/35 + analysis * 15/35)$
+## 2. UI to rotate symbol
+### Changes in files:
+  - __Symbol.fs__
+    - `1164-1173` RotateSymbols compList
 
-$extendedMark = code * 20/50 + analysis * 15/50  + extensions * 15/50$
-
-$overallMark = \max (baseMark, extendedMark)$
-
-* This section can be missing if you have not done significant extension work.
-* Extension code, if well documented (in the code) and clearly written, can be assessed without working 
-  (if it is demonstrated it depends on other people's code not yet written). 
-* Don't bother writing this section unless you have significant extension work, because the mark here 
-  will usually not be counted in that case (see the marking scheme). Marks for extensions will be awarded 
-only for work of C level or above.
-
-* delete the above comemnts and add your satement of extensions as below*
-
-1.  List as numbered points the extensions (features) your code will support
-
-     a. Use nested letters for the functions you have written extra, 
-     or changed, to allow this, and for concise comments concise comments about why they work.
+  - __Sheet.fs__
+    - `86` Type KeyboardMsg Rotate
+    - `859-863` Keypress Rotate
 
 
+  - __Renderer.fs__
+    - `151-152` makeItem "Rotate Symbol"
+### Explanation:
+The UI was altered to incorporate the use of symbol rotation. Thus was done by first altering the `Renderer.fs`. Line 151 was added
+to add the menu item "Rotate Symbol" in order to be able to rotate any symbol selected. This option was then linked through `Sheet.fs`
+This functionality can be found on the menu bar under "View". Further implementation was added to rotation by adding a keyboard shortcut.
+This was done in line 86 of `Sheet.fs` where the KeybrdMsg "Rotate" was added to implement this. Lines 859-863 were added to link
+the menu item and keyboard shortcut "Shift+R" to Symbol.RotateSymbols in `Symbol.fs` to rotate the symbol selected.  
+The case "RotateSymbols" was added to the "update" function used in `Symbol.fs` to update the symbols on the canvas. As seen in lines
+"1164-1173" a new map of symbols, to be displayed and were existing on the canvas, is created where the symbol with the specified id
+found after being seelcted, is changed by incrementing its STransform value to the next Rotation using stransform_fsm and
+updating the `APortOffsetMap` using RotatePortMap provided by Section 1. Finally, the model Symbols are replaced by these new symbols.
+As a result, the selected symbol is updated with its 90 deg rotated version. Worth noting is the addition of the `canvasPortLocation`
+function in this case to print the global port locations as explained previously.  
+The above can be fully tested by selecting a symbol on the canvas and pressing either `Shift+R` or `View > Rotate Symbol`.
+The "Global" port coordinates of the selected symbol will also appear in the console if Developer Tools are toggled on.
 
+### 3. Make symbol bounding box work with rotation
+### Changes in files:
+  - __Symbol.fs__
+    - `724-727` getBoundingBoxofSymbol
+    - `728-729` getBoundingBoxes
+    - `730-731` getOneBoundingBox
+
+### Explanation:
+The function `getBoundingBoxofSymbol` was updated to correctly alter the bounding box border of each symbol by taking into account
+the current orientation of the symbol. This is done using the STransform passed from the Symbol as input of the function. This is
+used as a match case where the bounding box is altered as `HxW` and `WxH` based on the current orientation of the symbol.
+The height and weight of the symbol are passed to the border width and height in order or in reverse. This ensures that for every orientation
+of the symbol, the correct border is used. The new `getBoundingBoxofSymbol` function is passed to the `getBoundingBoxes` and `getOneBoundingBox`
+to be used by `Sheet.fs` to correctly display the Bounding box of the symbol at each orientation.  
+This can be tested by selecting the symbol to be tested, then rotated and checking with another symbol whether the bounding box
+correctly responds when disrupted.
+
+The Symbol enhancements for section 2 described above are fully working without  producing any errors during build and runtime
