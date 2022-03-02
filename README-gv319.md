@@ -1,8 +1,8 @@
-# Example README for individual code submission
+# README for individual code submission - GV319
 
 ## Admin and quick access links
 
-*link to your teamN.md file*
+Link to: 
 [Common repo Team 6 file](https://github.com/tomcl/hlp22docs/blob/main/Team6.md)
 
 Link to altered files:  
@@ -11,30 +11,24 @@ Link to altered files:
 * [Renderer (Section 2)](src/Renderer/Renderer.fs)  
 
 I am responsible for making the following changes in my code:
-* __Symbol.fs:__ Lines : 718-1315 (Section 2) and Lines : 97-102 (stransform_fsm) 
-  - Includes changes to existing code for Section 2 and new functions implementing the extensions.
-* __Sheet.fs:__ Lines 86, 859-863 (Extensions)
-  - Includes changes required to make extensions for rotation work.
-* __Renderer.fs:__ Lines 151 (Extensions)
-  - Includes changes required to make extensions for UI rotation work.
-
-## Code Quality
-Things to note:
-* Naming of `myGoodName`, `myWonderfulLongName`
-* New function boundaries: `topfun` -> `firstfun`, `topfun` -> `secondFun`
-* New types: MyGoodType
-* Helper function `myHelper` which is higher order and really helpful
-* I cleaned up all the sprintf and printf statements to use interpolated strings
-
-Your code will all be assessed anyway, so this is optional.
+* __Symbol.fs:__ 
+Includes changes to existing code for Section 2 and new functions implementing the extensions.
+  * Lines : 718-1315 (Section 2)
+  * Lines : 97-102 (stransform_fsm) 
+* __Sheet.fs:__ 
+Includes changes required to make extensions for rotation work.
+  * Lines 86, 859-863 (Extensions)
+* __Renderer.fs:__ 
+Includes changes required to make extensions for UI rotation work.
+  * Lines: 151 (Extensions)
 
 ## Analysis
 
 ### Types
-_The types decided in the first part of Symbol.fs were `STransform` of type `Rotation` and `PortOrientationOffset` of type {`PortOrientation`,`Offset`} each with its four possible cases to be used to describe
-the different rotations fo the symbol and the side of the symbol its ports are at each rotation._
-_`APortOffsetsMap` of type `Map<string,PortOrientationOffset>` was used to describe the port locations relative to the top left corner of the symbol.
-This map uses string keys `I0..IN` and `O0..ON` to correctly distinguish and store the input and output port offsets in the map._
+The types decided in the first part of Symbol.fs were `STransform` of type `Rotation: R0, R90, R180, R270` and `PortOrientationOffset` of type {`PortOrientation: Right, Bottom, Left, Top`,`Offset: XYPos`} to be used to describe
+the different rotations fo the symbol and the side of the symbol its ports are at each rotation.
+`APortOffsetsMap` of type `Map<string,PortOrientationOffset>` was used to describe the port locations relative to the top left corner of the symbol.
+This map uses string keys `I0..IN` and `O0..ON`, mapped in this order, to correctly distinguish and store the input and output port offsets in the map.
 
 ### Changes to pre-existing code
 
@@ -70,8 +64,8 @@ The code demonstrated in the 5 minute feedback will be to:
 ## 1. Locate port position and orientation, given symbol position and orientation
 ### Changes in files:
   - __Symbol.fs__
-    - `743-748`canvasPortLocation
-    - `753-761` getGlobalPortPos
+    - `canvasPortLocation` (Lines: 743-748)
+    - `getGlobalPortPos` (Lines: 753-761)
 
 ### Explanation:
 Functions `canvasPortLocation` and `getGlobalPortPos` were created to produce the "Global" Coordinates of the ports
@@ -94,15 +88,15 @@ to `buswire.fs` to ensure that the wires are correctly displayed during rotation
 ## 2. UI to rotate symbol
 ### Changes in files:
   - __Symbol.fs__
-    - `1164-1173` RotateSymbols compList
+    - `RotateSymbols compList` (Lines: 1164-1173)
 
   - __Sheet.fs__
-    - `86` Type KeyboardMsg Rotate
-    - `859-863` Keypress Rotate
+    - `Type KeyboardMsg Rotate` (Lines: 86)
+    - `Keypress Rotate` (Lines: 859-863)
 
 
   - __Renderer.fs__
-    - `151-152` makeItem "Rotate Symbol"
+    - `makeItem "Rotate Symbol` (Lines: 151-152)
 ### Explanation:
 The UI was altered to incorporate the use of symbol rotation. Thus was done by first altering the `Renderer.fs`. Line 151 was added
 to add the menu item "Rotate Symbol" in order to be able to rotate any symbol selected. This option was then linked through `Sheet.fs`
@@ -118,12 +112,12 @@ function in this case to print the global port locations as explained previously
 The above can be fully tested by selecting a symbol on the canvas and pressing either `Shift+R` or `View > Rotate Symbol`.
 The "Global" port coordinates of the selected symbol will also appear in the console if Developer Tools are toggled on.
 
-### 3. Make symbol bounding box work with rotation
+## 3. Make symbol bounding box work with rotation
 ### Changes in files:
   - __Symbol.fs__
-    - `724-727` getBoundingBoxofSymbol
-    - `728-729` getBoundingBoxes
-    - `730-731` getOneBoundingBox
+    - `getBoundingBoxofSymbol` (Lines: 724-727)
+    - `getBoundingBoxes` (Lines: 728-729)
+    - `getOneBoundingBox` (Lines: 730-731)
 
 ### Explanation:
 The function `getBoundingBoxofSymbol` was updated to correctly alter the bounding box border of each symbol by taking into account
