@@ -348,7 +348,7 @@ let isBBoxAllVisible (bb: BoundingBox) =
 let getWireBBox (wire: BusWire.Wire) (model: Model) =
     let coords = 
         wire.Segments
-        |> List.collect (fun seg -> [seg.Start; seg.End])
+        |> List.collect (fun seg -> [seg.Start; BusWire.getRISegEnd seg.Start seg])
     let xCoords =  coords |> List.map (fun xy -> xy.X)
     let yCoords =  coords |> List.map (fun xy -> xy.Y)
     let lh,rh = List.min xCoords, List.max xCoords
