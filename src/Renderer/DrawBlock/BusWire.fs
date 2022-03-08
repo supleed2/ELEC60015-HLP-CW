@@ -221,10 +221,6 @@ type Msg =
 
 //-------------------------------Implementation code----------------------------//
 
-//---------------------------------------------------------------------------//
-//                         ad3919 code section start                         //
-//---------------------------------------------------------------------------//
-
 let ASegsToVertices (segList:ASeg list) = 
     let firstCoord = (segList[0].Start.X, segList[0].Start.Y)
     let verticesExceptFirst = List.map (fun seg -> (seg.End.X,seg.End.Y)) segList
@@ -618,10 +614,6 @@ let view (model: Model) (dispatch: Dispatch<Msg>) =
  
     g [] [(g [] wires); symbols]
     |> TimeHelpers.instrumentInterval "WireView" start // Time total view funtion and return original output
-
-//---------------------------------------------------------------------------//
-//                          ad3919 code section end                          //
-//---------------------------------------------------------------------------//
 
 /// This function is given two couples of
 /// points that define two line segments and it returns:
