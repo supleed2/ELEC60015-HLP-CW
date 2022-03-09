@@ -384,6 +384,8 @@ let private makeExtraInfo model (comp:Component) text dispatch =
 
 
 let viewSelectedComponent (model: ModelType.Model) dispatch =
+    
+    
     let sheetDispatch sMsg = dispatch (Sheet sMsg)
     let formatLabelText (txt: string) =
         txt.ToUpper()
@@ -392,7 +394,12 @@ let viewSelectedComponent (model: ModelType.Model) dispatch =
         |> (fun chars -> match Seq.length chars with | 0 -> None | _ -> Some (String.concat "" (Seq.map string chars)))
     match model.Sheet.SelectedComponents with
     | [ compId ] ->
-        let comp = Symbol.extractComponent model.Sheet.Wire.Symbol compId
+        let comp = Symbol.extractComponent model.Sheet.Wire.Symbol compId // Extract Component : function in Symbol.fs
+        let sym = Symbol.extractSymbol model.Sheet.Wire.Symbol compId     // Extract Symbol : function in Symbol.fs
+        let ports =
+            sym.APortOffsetsMap
+            |> Map.toList
+            |> List.map fst
         div [Key comp.Id] [
             // let label' = extractLabelBase comp.Label
             // TODO: normalise labels so they only contain allowed chars all uppercase
@@ -411,6 +418,24 @@ let viewSelectedComponent (model: ModelType.Model) dispatch =
                 //updateNames model (fun _ _ -> model.WaveSim.Ports) |> StartWaveSim |> dispatch
                 dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) // reload the new component
                 )
+            let items =
+                List.map (fun i ->
+                textFormField required "Component Rent" i (fun text ->
+//                TODO: removed formatLabel for now
+                //setComponentLabel model sheetDispatch comp (formatLabel comp text)
+                match formatLabelText text with
+                | Some label -> 
+                    setComponentLabel model sheetDispatch comp label
+                    dispatch <| SetPopupDialogText (Some label)
+                | None -> ()
+                //updateNames model (fun _ _ -> model.WaveSim.Ports) |> StartWaveSim |> dispatch
+                dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) // reload the new component
+                )) ports
+            
+            printf "%A" items
+            match items with
+            | [x] -> x
+            | _ -> nothing
         ]    
     | _ -> div [] [ str "Select a component in the diagram to view or change its properties, for example number of bits." ]
 

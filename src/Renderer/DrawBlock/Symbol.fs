@@ -765,7 +765,7 @@ let canvasPortLocation (sym:Symbol) : XYPos list =
 // Function to generate the true XYPos of a specified Port on the Canvas given the port and symbol
 // Input:  Symbol, Port -> Take the symbol and the specified port
 // Output: XYPos-> Return the XYPos position of the ports depending on being inputs or outputs
-let getGlobalPortPos (sym: Symbol) (port:Port) :XYPos = 
+let getGlobalPortPos (sym: Symbol) (port:Port) : (PortOrientation*XYPos) = 
     let typePort,ports =
         if port.PortType = PortType.Input then
             ("I",sym.Compo.InputPorts)
@@ -773,13 +773,15 @@ let getGlobalPortPos (sym: Symbol) (port:Port) :XYPos =
             ("O",sym.Compo.OutputPorts)
     let index = float( List.findIndex (fun (p:Port)  -> p = port) ports )
     
-    (Map.find (typePort + string index) sym.APortOffsetsMap).Offset
+    let positionOffset = (Map.find (typePort + string index) sym.APortOffsetsMap)
+    (positionOffset.Side,positionOffset.Offset)
+     
 
 /// It is used in getInputPortLocation for a single port
 let getInputPortsPositionMap (symbols: Symbol list)  = 
     symbols
     |> List.collect (fun sym -> List.map (fun p -> sym,p) sym.Compo.InputPorts)
-    |> List.map (fun (sym,port) -> (InputPortId port.Id, posAdd (getGlobalPortPos sym port) sym.Pos))
+    |> List.map (fun (sym,port) -> (InputPortId port.Id,((fst (getGlobalPortPos sym port)), posAdd (snd (getGlobalPortPos sym port)) sym.Pos)))
     |> Map.ofList
 
 
@@ -787,7 +789,7 @@ let getInputPortsPositionMap (symbols: Symbol list)  =
 let getOutputPortsPositionMap (symbols: Symbol list)  = 
     symbols
     |> List.collect (fun sym -> List.map (fun p -> sym,p) sym.Compo.OutputPorts)
-    |> List.map (fun (sym,port) -> (OutputPortId port.Id , posAdd (getGlobalPortPos sym port) sym.Pos))
+    |> List.map (fun (sym,port) -> (OutputPortId port.Id ,((fst (getGlobalPortPos sym port)), posAdd (snd (getGlobalPortPos sym port)) sym.Pos)))
     |> Map.ofList
 
 ///Returns the port object associated with a given portId
@@ -835,9 +837,9 @@ let getOnePortLocation (symModel: Model) (portId : string) (pType: PortType)=
             getInputPortLocation symModel (InputPortId portId)
         | PortType.Output ->
             getOutputPortLocation symModel (OutputPortId portId)
-            
+
 /// Returns the location of a given portId, with better efficiency
-let getOnePortLocationNew (symModel: Model) (portId : string) (pType: PortType) : XYPos =
+let getOnePortLocationNew (symModel: Model) (portId : string) (pType: PortType): PortOrientation * XYPos =
     symModel.Symbols
     |> Map.pick (fun _ sym -> 
         let comp = sym.Compo
@@ -845,10 +847,10 @@ let getOnePortLocationNew (symModel: Model) (portId : string) (pType: PortType) 
             List.tryFind (fun (po:Port) -> po.Id = portId) comp.InputPorts
         else
             List.tryFind (fun (po:Port) -> po.Id = portId) comp.OutputPorts
-        |> Option.map (fun port -> posAdd (getGlobalPortPos sym port) sym.Pos))
+        |> Option.map (fun port ->((fst (getGlobalPortPos sym port)), posAdd (snd (getGlobalPortPos sym port)) sym.Pos)))
 
 
-/// Returns the locations of a given input portId and output portId
+/// Returns the locations of a given input portId and output portId 
 let getTwoPortLocations (symModel: Model) (inPortId: InputPortId ) (outPortId: OutputPortId) =
     match inPortId, outPortId with
     | InputPortId inputId, OutputPortId outputId ->
@@ -1316,6 +1318,9 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
 // ----------------------interface to Issie----------------------------- //
 let extractComponent (symModel: Model) (sId:ComponentId) : Component = 
     symModel.Symbols[sId].Compo
+
+let extractSymbol (symModel: Model) (sId:ComponentId) : Symbol = 
+    symModel.Symbols[sId]
 
 let extractComponents (symModel: Model) : Component list =
     symModel.Symbols

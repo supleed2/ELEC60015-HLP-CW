@@ -422,8 +422,9 @@ let findNearbyPorts (model: Model) =
 /// Returns what is located at pos
 /// Priority Order: InputPort -> OutputPort -> Component -> Wire -> Canvas
 let mouseOn (model: Model) (pos: XYPos) : MouseOn =
-    let inputPorts, outputPorts = findNearbyPorts model
-
+    let inputPortsWithSide, outputPortsWithSide = findNearbyPorts model
+    let inputPorts = List.map(fun (outPort,(orient,location)) -> outPort,location) inputPortsWithSide
+    let outputPorts = List.map(fun (outPort,(orient,location)) -> outPort,location) outputPortsWithSide
     //TODO FIX THIS - QUICK FIX TO MAKE WORK, NOT IDEAL
     //The ports/wires are being loaded in the correct place but the detection is not working 
     //Something is wrong with the mouse coordinates somewhere, might be caused by zoom? not sure
@@ -682,8 +683,9 @@ let mDragUpdate (model: Model) (mMsg: MouseT) : Model * Cmd<Msg> =
         moveSymbols model mMsg
     | ConnectingInput _ -> 
         let nearbyComponents = findNearbyComponents model mMsg.Pos
-        let _, nearbyOutputPorts = findNearbyPorts model
-
+        let _, nearbyOutputPortsWithSide = findNearbyPorts model
+        let nearbyOutputPorts = List.map(fun (outPort,(orient,location)) -> outPort,location)nearbyOutputPortsWithSide
+        
         let targetPort, drawLineTarget = 
             match mouseOnPort nearbyOutputPorts mMsg.Pos 12.5 with
             | Some (OutputPortId portId, portLoc) -> (portId, portLoc) // If found target, snap target of the line to the port
@@ -698,8 +700,8 @@ let mDragUpdate (model: Model) (mMsg: MouseT) : Model * Cmd<Msg> =
         , Cmd.ofMsg CheckAutomaticScrolling
     | ConnectingOutput _ -> 
         let nearbyComponents = findNearbyComponents model mMsg.Pos
-        let nearbyInputPorts, _ = findNearbyPorts model
-        
+        let nearbyInputPortsWithSide, _ = findNearbyPorts model
+        let nearbyInputPorts = List.map(fun (outPort,(orient,location)) -> outPort,location) nearbyInputPortsWithSide
         let targetPort, drawLineTarget = 
             match mouseOnPort nearbyInputPorts mMsg.Pos 12.5 with
             | Some (InputPortId portId, portLoc) -> (portId, portLoc) // If found target, snap target of the line to the port
