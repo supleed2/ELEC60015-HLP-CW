@@ -396,10 +396,25 @@ let viewSelectedComponent (model: ModelType.Model) dispatch =
     | [ compId ] ->
         let comp = Symbol.extractComponent model.Sheet.Wire.Symbol compId // Extract Component : function in Symbol.fs
         let sym = Symbol.extractSymbol model.Sheet.Wire.Symbol compId     // Extract Symbol : function in Symbol.fs
+        let stransform = string sym.STransform
         let ports =
             sym.APortOffsetsMap
             |> Map.toList
+        let portName =
+            ports
             |> List.map fst
+        let portSide =
+            ports
+            |> List.map snd
+            |> List.map (fun i -> i.Side)
+            |> List.map (fun i -> string i)
+        let portOffset =
+            ports
+            |> List.map snd
+            |> List.map (fun i -> i.Offset)
+            |> List.map (fun i -> string i)
+            
+        
         div [Key comp.Id] [
             // let label' = extractLabelBase comp.Label
             // TODO: normalise labels so they only contain allowed chars all uppercase
@@ -418,24 +433,66 @@ let viewSelectedComponent (model: ModelType.Model) dispatch =
                 //updateNames model (fun _ _ -> model.WaveSim.Ports) |> StartWaveSim |> dispatch
                 dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) // reload the new component
                 )
-            let items =
-                List.map (fun i ->
-                textFormField required "Component Rent" i (fun text ->
-//                TODO: removed formatLabel for now
+            textFormField required "Component STransform" stransform (fun text ->
+                // TODO: removed formatLabel for now
                 //setComponentLabel model sheetDispatch comp (formatLabel comp text)
                 match formatLabelText text with
-                | Some label -> 
+                | Some label ->
+                    setComponentLabel model sheetDispatch comp label //TODO: Fix this part to update STransform
+                    dispatch <| SetPopupDialogText (Some label)
+                | None -> ()
+                //updateNames model (fun _ _ -> model.WaveSim.Ports) |> StartWaveSim |> dispatch
+                dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) // reload the new component
+                )
+            textFormField required "Component Port" portName[0] (fun text ->
+                // TODO: removed formatLabel for now
+                //setComponentLabel model sheetDispatch comp (formatLabel comp text)
+                match formatLabelText text with
+                | Some label ->
                     setComponentLabel model sheetDispatch comp label
                     dispatch <| SetPopupDialogText (Some label)
                 | None -> ()
                 //updateNames model (fun _ _ -> model.WaveSim.Ports) |> StartWaveSim |> dispatch
                 dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) // reload the new component
-                )) ports
-            
-            printf "%A" items
-            match items with
-            | [x] -> x
-            | _ -> nothing
+                )
+            textFormField required "Component Port" portSide[0] (fun text ->
+                // TODO: removed formatLabel for now
+                //setComponentLabel model sheetDispatch comp (formatLabel comp text)
+                match formatLabelText text with
+                | Some label ->
+                    setComponentLabel model sheetDispatch comp label
+                    dispatch <| SetPopupDialogText (Some label)
+                | None -> ()
+                //updateNames model (fun _ _ -> model.WaveSim.Ports) |> StartWaveSim |> dispatch
+                dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) // reload the new component
+                )
+            textFormField required "Component Port" portOffset[0] (fun text ->
+                // TODO: removed formatLabel for now
+                //setComponentLabel model sheetDispatch comp (formatLabel comp text)
+                match formatLabelText text with
+                | Some label ->
+                    setComponentLabel model sheetDispatch comp label
+                    dispatch <| SetPopupDialogText (Some label)
+                | None -> ()
+                //updateNames model (fun _ _ -> model.WaveSim.Ports) |> StartWaveSim |> dispatch
+                dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) // reload the new component
+                )
+//            let items =
+//                List.map (fun i ->
+//                textFormField required "Component Rent" i (fun text ->
+////                TODO: removed formatLabel for now
+//                //setComponentLabel model sheetDispatch comp (formatLabel comp text)
+//                match formatLabelText text with
+//                | Some label -> 
+//                    setComponentLabel model sheetDispatch comp label
+//                    dispatch <| SetPopupDialogText (Some label)
+//                | None -> ()
+//                //updateNames model (fun _ _ -> model.WaveSim.Ports) |> StartWaveSim |> dispatch
+//                dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) // reload the new component
+//                )) ports
+//            match items with
+//            | [x] -> x
+//            | _ -> nothing
         ]    
     | _ -> div [] [ str "Select a component in the diagram to view or change its properties, for example number of bits." ]
 

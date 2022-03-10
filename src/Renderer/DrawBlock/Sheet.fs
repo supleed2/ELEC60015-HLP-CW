@@ -83,7 +83,7 @@ type SnapIndicator =
 
 /// For Keyboard messages
 type KeyboardMsg =
-    | CtrlS | CtrlC | CtrlV | CtrlZ | CtrlY | CtrlA | CtrlW | AltC | AltV | AltZ | AltShiftZ | ZoomIn | ZoomOut | DEL | ESC | Rotate
+    | CtrlS | CtrlC | CtrlV | CtrlZ | CtrlY | CtrlA | CtrlW | AltC | AltV | AltZ | AltShiftZ | ZoomIn | ZoomOut | DEL | ESC | Rotate | FlipV | FlipH
 
 type Msg =
     | Wire of BusWire.Msg
@@ -862,6 +862,16 @@ let update (msg : Msg) (model : Model): Model*Cmd<Msg> =
         model,
         Cmd.batch [
             symbolCmd (Symbol.RotateSymbols model.SelectedComponents) // Rotate Symbol using keyboard combination
+        ]
+    | KeyPress FlipV ->
+        model,
+        Cmd.batch [
+            symbolCmd (Symbol.FlipVSymbols model.SelectedComponents) // Flip Vertically Symbol using keyboard combination
+        ]
+    | KeyPress FlipH ->
+        model,
+        Cmd.batch [
+            symbolCmd (Symbol.FlipHSymbols model.SelectedComponents) // Flip Vertically Symbol using keyboard combination
         ]
     | KeyPress CtrlV ->
         let newSymbolModel, pastedCompIds = Symbol.pasteSymbols model.Wire.Symbol model.LastMousePos // Symbol has Copied Symbols stored

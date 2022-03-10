@@ -76,7 +76,9 @@ type Msg =
     | MoveSymbols of compList: ComponentId list * move: XYPos
     | ShowPorts of ComponentId list
     | SelectSymbols of ComponentId list// Issie interface
-    | RotateSymbols of ComponentId list //First Attempt at implementing a way to rotate symbol. 
+    | RotateSymbols of ComponentId list //First Attempt at implementing a way to rotate symbol.
+    | FlipHSymbols of ComponentId list //First Attempt at implementing a way to flip symbol horizontally.
+    | FlipVSymbols of ComponentId list //First Attempt at implementing a way to flip symbol vertically.
     | SymbolsHaveError of sIds: ComponentId list
     | ChangeLabel of sId : ComponentId * newLabel : string
     | PasteSymbols of sIds: ComponentId list
@@ -1308,7 +1310,15 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
         //Used to print it Dev Tools Terminal list of ports global coordinates starting anticlockwise from inputs
         printf "%A" result
         { model with Symbols = newSymbols }, Cmd.none
-        
+    
+    | FlipHSymbols compList -> // NEW: flip a symbol Horizontally
+        let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
+        { model with Symbols = resetSymbols }, Cmd.none
+    
+    | FlipVSymbols compList ->
+        let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
+        { model with Symbols = resetSymbols }, Cmd.none    
+    
     | ErrorSymbols (errorCompList,selectCompList,isDragAndDrop) -> 
         let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
         let selectSymbols =
