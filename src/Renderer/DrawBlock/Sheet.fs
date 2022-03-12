@@ -169,6 +169,10 @@ type Model = {
     member this.ChangeLabel (dispatch: Dispatch<Msg>) (compId: ComponentId) (lbl: string) =
         dispatch <| (Wire (BusWire.Symbol (Symbol.ChangeLabel (compId, lbl) ) ) )
         
+    /// Change the Port Side of Component specified by compId to lbl
+    member this.ChangePort (dispatch: Dispatch<Msg>) (compId: ComponentId) (portName: string) (portSide: string) =
+        dispatch <| (Wire (BusWire.Symbol (Symbol.ChangePort (compId, portName,portSide) ) ) )    
+        
     /// Run Bus Width Inference check
     member this.DoBusWidthInference dispatch =
         dispatch <| (Wire (BusWire.BusWidths))
