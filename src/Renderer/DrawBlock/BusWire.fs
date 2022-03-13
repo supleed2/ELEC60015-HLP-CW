@@ -33,7 +33,7 @@ type ASeg =
         Dir: Orientation
         HostId: ConnectionId
         /// List of x-coordinate values of segment jumps. Only used on horizontal segments.
-        JumpCoordinateListA: list<float * SegmentId>
+        JumpCoordinateListA: (float * SegmentId) list
         Draggable: bool
         ManualRoute: bool
     }
@@ -48,7 +48,7 @@ type RISeg =
         Length: float
         HostId: ConnectionId
         /// List of distances from start of segment jumps. Only used on Horizontal segments
-        JumpDistanceListRI: list<float * SegmentId>
+        JumpDistanceListRI: (float * SegmentId) list
         Draggable: bool
         ManualRoute: bool
     }
@@ -125,13 +125,13 @@ type Model =
     {
         Symbol: Symbol.Model
         WX: Map<ConnectionId, Wire>
-        FromVerticalToHorizontalSegmentIntersections: Map<SegmentId, list<ConnectionId*SegmentId>>
-        FromHorizontalToVerticalSegmentIntersections: Map<SegmentId, list<ConnectionId*SegmentId>>
-        CopiedWX: Map<ConnectionId, Wire> 
+        FromVerticalToHorizontalSegmentIntersections: Map<SegmentId, (ConnectionId * SegmentId) list>
+        FromHorizontalToVerticalSegmentIntersections: Map<SegmentId, (ConnectionId * SegmentId) list>
+        CopiedWX: Map<ConnectionId, Wire>
         SelectedSegment: SegmentId
         LastMousePos: XYPos
         ErrorWires: ConnectionId list
-        Notifications: Option<string>
+        Notifications: string option
     }
 
 //----------------------------Message Type-----------------------------------//
@@ -144,14 +144,14 @@ type Msg =
     | CopyWires of ConnectionId list
     | DeleteWires of ConnectionId list
     | SelectWires of ConnectionId list
-    | UpdateWires of list<ComponentId> * XYPos
+    | UpdateWires of ComponentId list * XYPos
     | DragWire of ConnectionId * MouseT
     | ColorWires of ConnectionId list * HighLightColor
     | ErrorWires of ConnectionId list
     | ResetJumps of ConnectionId list
     | MakeJumps of ConnectionId list
     | ResetModel // For Issie Integration
-    | LoadConnections of list<Connection> // For Issie Integration
+    | LoadConnections of Connection list // For Issie Integration
 
 //-------------------------Debugging functions---------------------------------//
 
@@ -233,7 +233,7 @@ let RISegsToVertices (segList: RISeg list) =
     |> List.map (fun pos -> pos.X, pos.Y)
 
 /// Get initial list of wire vertices given port locations corresponding to the enpoints of a wire
-let initialWireVerticesFromPorts (portCoords : XYPos * XYPos)  = 
+let initialWireVerticesFromPorts (portCoords : XYPos * XYPos) : XYPos list * bool = 
     let startX, startY, endX, endY = snd(portCoords).X, snd(portCoords).Y, fst(portCoords).X, fst(portCoords).Y
 
     // adjust length of segments 0 and 6 - the sticks - so that when two ports are aligned and close you still get left-to-right routing.
@@ -332,7 +332,7 @@ let convertVerticesToRISegs connId (isLeftToRight: bool) (verticesList: XYPos li
     // TODO: native RISeg implementation
 
 /// Convert a (possibly legacy) issie Connection stored as a list of vertices to Absolute Segments
-let issieVerticesToASegs connId (verticesList: list<float*float>) : ASeg list =
+let issieVerticesToASegs connId (verticesList: (float * float) list) : ASeg list =
     let XYPosList =
         verticesList |> List.map (fun (x,y) -> {X=x;Y=y})
 
@@ -376,7 +376,7 @@ let extractConnection (wModel : Model) (cId : ConnectionId) : Connection =
     }
 
 /// Converts BusWire.Wire(s) in WX of supplied Model to list of Connections
-let extractConnections (wModel : Model) : list<Connection> = 
+let extractConnections (wModel : Model) : Connection list = 
     wModel.WX
     |> Map.toList
     |> List.map (fun (connectionId, _) -> extractConnection wModel connectionId)
@@ -453,7 +453,7 @@ let renderSegment (segment: ASeg) (colour: string) (width: string) : ReactElemen
     if segment.Dir = Horizontal then
         let pathParameters = { defaultPath with Stroke = colour; StrokeWidth = string renderWidth }
 
-        let renderWireSubSegment (vertex1 : XYPos) (vertex2 : XYPos) : list<ReactElement> =
+        let renderWireSubSegment (vertex1 : XYPos) (vertex2 : XYPos) : ReactElement list =
             let Xa, Ya, Xb, Yb = vertex1.X, vertex1.Y, vertex2.X, vertex2.Y
             makeLine Xa Ya Xb Yb lineParameters
             ::
@@ -466,7 +466,7 @@ let renderSegment (segment: ASeg) (colour: string) (width: string) : ReactElemen
         let segmentJumpHorizontalSize = 9.0
         let segmentJumpVerticalSize = 6.0
         
-        let renderSingleSegmentJump (intersectionCoordinate : XYPos) : list<ReactElement> =
+        let renderSingleSegmentJump (intersectionCoordinate : XYPos) : ReactElement list =
             let x, y = intersectionCoordinate.X, intersectionCoordinate.Y
 
             let startingPoint = {X = x - segmentJumpHorizontalSize/2.0; Y = y}
@@ -482,7 +482,7 @@ let renderSegment (segment: ASeg) (colour: string) (width: string) : ReactElemen
                 makeCircle endingPoint.X endingPoint.Y circleParameters
             ]
         
-        let rec renderMultipleSegmentJumps (segmentJumpCoordinateList : list<float>) (segmentJumpYCoordinate : float) : list<ReactElement> =
+        let rec renderMultipleSegmentJumps (segmentJumpCoordinateList : float list) (segmentJumpYCoordinate : float) : ReactElement list =
             
             match segmentJumpCoordinateList with
 
@@ -510,7 +510,7 @@ let renderSegment (segment: ASeg) (colour: string) (width: string) : ReactElemen
                     renderMultipleSegmentJumps (secondElement :: tailList) (segmentJumpYCoordinate)
             
 
-        let completeWireSegmentRenderFunction (seg : ASeg) : list<ReactElement> =
+        let completeWireSegmentRenderFunction (seg : ASeg) : ReactElement list =
             
             let jumpCoordinateList =
                 if (segment.Start.X > segment.End.X) then
@@ -576,7 +576,7 @@ type WireRenderProps =
 let singleWireView = 
     FunctionComponent.Of(
         fun (props: WireRenderProps) ->
-            let renderWireSegmentList : list<ReactElement> =
+            let renderWireSegmentList : ReactElement list =
                 props.Segments
                 |> List.map ( fun (segment: ASeg) -> renderSegment segment (props.ColorP.Text()) (string props.StrokeWidthP) )
                 // Call render helper functions on each segment, including jump rendering
@@ -725,7 +725,7 @@ let segmentIntersectsBoundingBoxCoordinates
 
     // Gets a list of points of intersection between a segment and the four
     // sides of the bounding box
-    let intersectionList : list<XYPos> =
+    let intersectionList : XYPos list =
         let sideVertices =
             [
                 (topLeft, bottomLeft)     // Left
@@ -1164,7 +1164,7 @@ let init () =
 
 
 /// Returns the wires connected to a list of components
-let getConnectedWires (model : Model) (componentIDs : list<ComponentId>) =
+let getConnectedWires (model : Model) (componentIDs : ComponentId list) =
 
     let isConnected (wire: Wire) =
         let inputs, outputs = Symbol.getPortLocations model.Symbol componentIDs
@@ -1183,7 +1183,7 @@ let getConnectedWires (model : Model) (componentIDs : list<ComponentId>) =
 /// - wires connected only to inputs
 /// - those connected only to outputs
 /// - wires with both inputs and outputs connected
-let filterWiresByCompMoved (model: Model) (componentIDs: list<ComponentId>) =
+let filterWiresByCompMoved (model: Model) (componentIDs: ComponentId list) =
     let inputs, outputs = Symbol.getPortLocations model.Symbol componentIDs
 
     // List of all wires
@@ -1893,11 +1893,11 @@ let getWireIfClicked (wModel : Model) (pos : XYPos) (n : float) : ConnectionId O
     List.tryHead intersectingWires
 
 ///
-let pasteWires (wModel : Model) (newCompIds : list<ComponentId>) : (Model * ConnectionId list) =
+let pasteWires (wModel : Model) (newCompIds : ComponentId list) : (Model * ConnectionId list) =
     let oldCompIds = Symbol.getCopiedSymbols wModel.Symbol
     
     let pastedWires =
-        let createNewWire (oldWire : Wire) : list<Wire> =
+        let createNewWire (oldWire : Wire) : Wire list =
             let newId = ConnectionId(JSHelpers.uuid())
     
             match Symbol.getEquivalentCopiedPorts wModel.Symbol oldCompIds newCompIds (oldWire.InputPort, oldWire.OutputPort) with
