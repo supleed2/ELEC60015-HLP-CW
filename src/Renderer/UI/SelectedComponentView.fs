@@ -423,7 +423,7 @@ let viewSelectedComponent (model: ModelType.Model) dispatch : ReactElement =
                 dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) // reload the new component
                 )
             // Control when the namesPortRaw map can be accessed else return normal name of port
-            let allowedDescription = match comp.Type with | NbitsAdder _ | Decode4 | Register _ |DFF| RegisterE _ |DFFE| ROM1 _ |AsyncROM1 _ | RAM1 _ | AsyncRAM1 _ | Mux2 | Demux2  | NbitsXor _ | Custom _ -> true | _ -> false
+            let allowedDescription = match comp.Type with | Custom _ -> true | _ -> false
             let ports =
                 sym.APortOffsetsMap
                 |> Map.toList

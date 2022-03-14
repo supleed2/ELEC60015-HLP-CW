@@ -285,6 +285,7 @@ let createComponent (pos: XYPos) (comptype: ComponentType) (id:string) (label:st
             Y = int (pos.Y - float h / 2.0) 
             H = h 
             W = w
+            D = [0]
         }
 
     createComponent' characteristics label

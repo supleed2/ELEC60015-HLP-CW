@@ -319,6 +319,7 @@ module CommonTypes
         Y : int
         H : int
         W : int
+        D : int list
     }
 
     /// JSConnection mapped to F# record.
