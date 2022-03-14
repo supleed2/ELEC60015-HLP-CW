@@ -31,6 +31,7 @@ type PortOrientation = Right | Bottom | Left | Top
 type PortOrientationOffset = {
     Side: PortOrientation //on which side a port is located : Right - Bottom - Left - Top
     Offset: XYPos
+    SideIndex: int
 }
 
 type Symbol =
@@ -267,10 +268,16 @@ let createComponent (pos: XYPos) (comptype: ComponentType) (id:string) (label:st
         | Custom x -> 
             let h = GridSize + GridSize * (List.max [List.length x.InputLabels; List.length x.OutputLabels])
             let maxInLength, maxOutLength = customCompMaxLabel x.InputLabels, customCompMaxLabel x.OutputLabels
-            let maxW = maxInLength + maxOutLength + label.Length
-            let scaledW = roundToZ GridSize (maxW * GridSize / 5) //Divide by 5 is just abitrary as otherwise the symbols would be too wide 
-            let w = max scaledW (GridSize * 4) //Ensures a minimum width if the labels are very small
+            let maxname = max maxInLength maxOutLength
+            // let maxW = maxInLength + maxOutLength + label.Length
+            // let scaledW = roundToZ GridSize (maxW * GridSize / 5) //Divide by 5 is just abitrary as otherwise the symbols would be too wide 
+            let w = max (maxname*14 + label.Length*10) (GridSize * 4)
+            // let w = max scaledW (GridSize * 4) //Ensures a minimum width if the labels are very small
+
             ( List.length x.InputLabels, List.length x.OutputLabels, h ,  w)
+
+
+
 
     
     // function that helps avoid dublicate code by initialising parameters that are the same for all component types and takes as argument the others
@@ -370,8 +377,8 @@ let portListToMap (portList: Port List) (symbol: Symbol) : Map<string,PortOrient
             |PortType.Output -> "O"+ string num 
         let value = 
             match port.PortType with 
-            |PortType.Input -> {Side=Left;Offset=offsethelper symbol.Compo symbol.STransform port}
-            |PortType.Output -> {Side=Right;Offset=offsethelper symbol.Compo symbol.STransform port}
+            |PortType.Input -> {Side=Left;Offset=(offsethelper symbol.Compo symbol.STransform port);SideIndex= num}
+            |PortType.Output -> {Side=Right;Offset=offsethelper symbol.Compo symbol.STransform port;SideIndex= num}
         [(key,value)]
     if (portList.Length)  < 1 then [] |> Map.ofList
     else ( [0..(portList.Length-1)] |> List.collect (fun x -> (adder symbol portList[x])) ) |> Map.ofList
@@ -382,13 +389,13 @@ let genAPortOffsets (symbol: Symbol) (cType: ComponentType) : Map<string,PortOri
     //generator for MUX
     let genAPortOffsetsMux (symbol: Symbol) = 
         let getPosY index = (float(symbol.Compo.H))* (( index + 1.0 )/(3.0))
-        Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=(getPosY 0.0)}});("I1", {Side=Left;Offset={X=0.0;Y=(getPosY 1.0)}});("I2", {Side=Bottom;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.9}});("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/2.0}})]
+        Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=(getPosY 0.0)};SideIndex= -1});("I1", {Side=Left;Offset={X=0.0;Y=(getPosY 1.0)};SideIndex= -1});("I2", {Side=Bottom;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.9};SideIndex= -1});("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/2.0};SideIndex= -1})]
 
 
     //generator for NBitsAdder
     let genAPortOffsetsAdder (symbol: Symbol) = 
         let getPosY index = (float(symbol.Compo.H))* (( index + 1.0 )/(3.0))
-        Map.ofList [ ("I0", {Side=Bottom;Offset={X=float(symbol.Compo.W)/3.0;Y=float(symbol.Compo.H)}});("I1", {Side=Left;Offset={X=0.0;Y=(getPosY 0.0)}}); ("I2", {Side=Left;Offset={X=0.0;Y=(getPosY 1.0)}}); ("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0}});("O1", {Side=Top;Offset={X=float(symbol.Compo.W)-30.0;Y=0.0}})]
+        Map.ofList [ ("I0", {Side=Bottom;Offset={X=float(symbol.Compo.W)/3.0;Y=float(symbol.Compo.H)};SideIndex= -1});("I1", {Side=Left;Offset={X=0.0;Y=(getPosY 0.0)};SideIndex= -1}); ("I2", {Side=Left;Offset={X=0.0;Y=(getPosY 1.0)};SideIndex= -1}); ("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0};SideIndex= -1});("O1", {Side=Top;Offset={X=float(symbol.Compo.W)-30.0;Y=0.0};SideIndex= -1})]
         
     //generator for everything else
     let genAPortOffsets' (symbol: Symbol) : Map<string,PortOrientationOffset> =
@@ -406,33 +413,33 @@ let genAPortOffsets (symbol: Symbol) (cType: ComponentType) : Map<string,PortOri
 /// Rotates port posistion (given the symbol rotation) by updating the APortOffsetsMap
 let rotatePortMap (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
     
-    let rotatePortMapMux (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
-        match symbol.STransform with
-        |R0 -> Map.ofList [ ("I0", {Side=Top;Offset={X=(float(symbol.Compo.H)*2.0/3.0);Y=(0.0)}});("I1", {Side=Top;Offset={X=(float(symbol.Compo.H)/3.0);Y=(0.0)}});("I2", {Side=Left;Offset={X=float(symbol.Compo.H)*0.1;Y=float(symbol.Compo.W)/2.0}});("O0", {Side=Bottom;Offset={X=float(symbol.Compo.H)/2.0;Y=float(symbol.Compo.W)}})]
-        |R90 -> Map.ofList [ ("I0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=(float(symbol.Compo.H)*2.0/3.0)}});("I1", {Side=Right;Offset={X=float(symbol.Compo.W);Y=(float(symbol.Compo.H)/3.0)}});("I2", {Side=Top;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.1}});("O0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)/2.0}})]
-        |R180 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=(float(symbol.Compo.H)/3.0);Y=float(symbol.Compo.W)}});("I1", {Side=Bottom;Offset={X=(float(symbol.Compo.H)*2.0/3.0);Y=float(symbol.Compo.W)}});("I2", {Side=Right;Offset={X=float(symbol.Compo.H)*0.9;Y=float(symbol.Compo.W)/2.0}});("O0", {Side=Top;Offset={X=float(symbol.Compo.H)/2.0;Y=0.0}})]
-        |R270 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=(float(symbol.Compo.H)/3.0)}});("I1", {Side=Left;Offset={X=0.0;Y=(float(symbol.Compo.H)*2.0/3.0)}});("I2", {Side=Bottom;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.9}});("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/2.0}})]
+    // let rotatePortMapMux (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
+    //     match symbol.STransform with
+    //     |R0 -> Map.ofList [ ("I0", {Side=Top;Offset={X=(float(symbol.Compo.H)*2.0/3.0);Y=(0.0)}});("I1", {Side=Top;Offset={X=(float(symbol.Compo.H)/3.0);Y=(0.0)}});("I2", {Side=Left;Offset={X=float(symbol.Compo.H)*0.1;Y=float(symbol.Compo.W)/2.0}});("O0", {Side=Bottom;Offset={X=float(symbol.Compo.H)/2.0;Y=float(symbol.Compo.W)}})]
+    //     |R90 -> Map.ofList [ ("I0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=(float(symbol.Compo.H)*2.0/3.0)}});("I1", {Side=Right;Offset={X=float(symbol.Compo.W);Y=(float(symbol.Compo.H)/3.0)}});("I2", {Side=Top;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.1}});("O0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)/2.0}})]
+    //     |R180 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=(float(symbol.Compo.H)/3.0);Y=float(symbol.Compo.W)}});("I1", {Side=Bottom;Offset={X=(float(symbol.Compo.H)*2.0/3.0);Y=float(symbol.Compo.W)}});("I2", {Side=Right;Offset={X=float(symbol.Compo.H)*0.9;Y=float(symbol.Compo.W)/2.0}});("O0", {Side=Top;Offset={X=float(symbol.Compo.H)/2.0;Y=0.0}})]
+    //     |R270 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=(float(symbol.Compo.H)/3.0)}});("I1", {Side=Left;Offset={X=0.0;Y=(float(symbol.Compo.H)*2.0/3.0)}});("I2", {Side=Bottom;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.9}});("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/2.0}})]
 
-    let rotatePortMapAdder (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
-        match symbol.STransform with
-            |R0 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.W)/3.0}});("I1", {Side=Top;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=0.0}}); ("I2", {Side=Top;Offset={X=float(symbol.Compo.H)/3.0;Y=0.0}}); ("O0", {Side=Bottom;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=float(symbol.Compo.W)}});("O1", {Side=Right;Offset={X=(symbol.Compo.H);Y=float(symbol.Compo.W)-30.0}})]
-            |R90 -> Map.ofList [ ("I0", {Side=Top;Offset={X=float(symbol.Compo.W)*2.0/3.0;Y=0.0}});("I1", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)*2.0/3.0}}); ("I2", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0}}); ("O0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)*2.0/3.0}});("O1", {Side=Bottom;Offset={X=30.0;Y=float(symbol.Compo.H)}})]
-            |R180 -> Map.ofList  [ ("I0", {Side=Right;Offset={X=float(symbol.Compo.H);Y=float(symbol.Compo.W)*2.0/3.0}});("I1", {Side=Bottom;Offset={X=float(symbol.Compo.H)/3.0;Y=float(symbol.Compo.W)}}); ("I2", {Side=Bottom;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=float(symbol.Compo.W)}}); ("O0", {Side=Top;Offset={X=float(symbol.Compo.H)/3.0;Y=0.0}});("O1", {Side=Left;Offset={X=0.0;Y=30.0}})]
-            |R270 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=float(symbol.Compo.W)/3.0;Y=float(symbol.Compo.H)}});("I1", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)/3.0}}); ("I2", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)*2.0/3.0}}); ("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0}});("O1", {Side=Top;Offset={X=float(symbol.Compo.W)-30.0;Y=0.0}})]
+    // let rotatePortMapAdder (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
+    //     match symbol.STransform with
+    //         |R0 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.W)/3.0}});("I1", {Side=Top;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=0.0}}); ("I2", {Side=Top;Offset={X=float(symbol.Compo.H)/3.0;Y=0.0}}); ("O0", {Side=Bottom;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=float(symbol.Compo.W)}});("O1", {Side=Right;Offset={X=(symbol.Compo.H);Y=float(symbol.Compo.W)-30.0}})]
+    //         |R90 -> Map.ofList [ ("I0", {Side=Top;Offset={X=float(symbol.Compo.W)*2.0/3.0;Y=0.0}});("I1", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)*2.0/3.0}}); ("I2", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0}}); ("O0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)*2.0/3.0}});("O1", {Side=Bottom;Offset={X=30.0;Y=float(symbol.Compo.H)}})]
+    //         |R180 -> Map.ofList  [ ("I0", {Side=Right;Offset={X=float(symbol.Compo.H);Y=float(symbol.Compo.W)*2.0/3.0}});("I1", {Side=Bottom;Offset={X=float(symbol.Compo.H)/3.0;Y=float(symbol.Compo.W)}}); ("I2", {Side=Bottom;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=float(symbol.Compo.W)}}); ("O0", {Side=Top;Offset={X=float(symbol.Compo.H)/3.0;Y=0.0}});("O1", {Side=Left;Offset={X=0.0;Y=30.0}})]
+    //         |R270 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=float(symbol.Compo.W)/3.0;Y=float(symbol.Compo.H)}});("I1", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)/3.0}}); ("I2", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)*2.0/3.0}}); ("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0}});("O1", {Side=Top;Offset={X=float(symbol.Compo.W)-30.0;Y=0.0}})]
 
     let rotatePortMap' (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
         map |> Map.map (fun key port ->
             match port.Side with
-            |Right -> {Side=Bottom;Offset={X=port.Offset.Y;Y=port.Offset.X}}
-            |Bottom -> {Side=Left;Offset={X=0.0;Y=port.Offset.X}}
-            |Left -> {Side=Top;Offset={X=port.Offset.Y;Y=port.Offset.X}}
-            |Top -> {Side=Right;Offset={X=float(symbol.Compo.W);Y=port.Offset.X}}
+            |Right -> {Side=Bottom;Offset={X=port.Offset.Y;Y=port.Offset.X};SideIndex= -1}
+            |Bottom -> {Side=Left;Offset={X=0.0;Y=port.Offset.X};SideIndex= -1}
+            |Left -> {Side=Top;Offset={X=port.Offset.Y;Y=port.Offset.X};SideIndex= -1}
+            |Top -> {Side=Right;Offset={X=float(symbol.Compo.W);Y=port.Offset.X};SideIndex= -1}
         ) //MUX + ADDER requires special treatment
     
     match symbol.Compo.Type with
-    |Mux2 -> rotatePortMapMux map symbol
-    |NbitsAdder _ -> rotatePortMapAdder map symbol
-    |MergeWires |SplitWire _ -> map
+    // |Mux2 -> rotatePortMapMux map symbol
+    // |NbitsAdder _ -> rotatePortMapAdder map symbol
+    |MergeWires |SplitWire _ |Mux2 |NbitsAdder _ |Custom _ -> map
     |_ -> rotatePortMap' map symbol 
 
 
@@ -449,18 +456,45 @@ let flipVPortMap (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
      failwithf "Not implemented Yet"
 
 let changePortSide (map:Map<string,PortOrientationOffset>) (portName: string) (newSide:PortOrientation) (symbol:Symbol) = 
-     let rev map: Map<string,string> = 
-       Map.fold (fun m key value -> m.Add(value,key)) Map.empty map
+    let rev map: Map<string,string> = 
+        Map.fold (fun m key value -> m.Add(value,key)) Map.empty map
 
-     let namesInv = rev (portNamesMap symbol.Compo)
+    let namesInv = rev (portNamesMap symbol.Compo)
 
-     let portId = Map.find portName namesInv
+    let portId = Map.find portName namesInv
 
-     map |> Map.change portId (fun x ->
-         match x with
-         | Some s -> Some {Side=newSide;Offset=s.Offset}
-         | None -> None
-     )
+    let portTarget = Map.find portId map
+    let currentSide = portTarget.Side
+    let prevSideIndex = portTarget.SideIndex
+    if (currentSide = newSide) then
+        let temp = 
+            Map.map (fun key port ->
+                match port.Side with
+                |a when a=currentSide -> (if port.SideIndex < prevSideIndex then {Side=port.Side;Offset=port.Offset;SideIndex=port.SideIndex+1} else {Side=port.Side;Offset=port.Offset;SideIndex=port.SideIndex})
+                |_ -> port
+            ) map
+        temp |> Map.change portId (fun x ->
+            match x with
+            | Some s -> Some {Side=newSide;Offset=s.Offset;SideIndex= 0}   //CHECK
+            | None -> None
+        )
+        // map |> Map.change portId (fun x ->
+        //     match x with
+        //     | Some s -> Some {Side=newSide;Offset=s.Offset;SideIndex= -1}   //CHECK
+        //     | None -> None
+        // )
+    else 
+        let temp = map |> Map.map (fun key port ->
+            match port.Side with
+            |a when a=currentSide -> (if port.SideIndex > prevSideIndex then {Side=port.Side;Offset=port.Offset;SideIndex=port.SideIndex-1} else {Side=port.Side;Offset=port.Offset;SideIndex=port.SideIndex})
+            |b when b=newSide -> {Side=port.Side;Offset=port.Offset;SideIndex=port.SideIndex+1}
+            |_ -> port
+        )
+        temp |> Map.change portId (fun x ->
+            match x with
+            | Some s -> Some {Side=newSide;Offset=s.Offset;SideIndex= 0}   //CHECK
+            | None -> None
+        )
 
 let getSides (map:Map<string,PortOrientationOffset>) =
      let lst = Map.toList map
@@ -512,8 +546,15 @@ let redefineCustomHW symbol =
      let r,b,l,t = countsides symbol.APortOffsetsMap
      let maxRL = max r l
      let maxTB = max t b
+<<<<<<< Updated upstream
      let heightNew = GridSize + GridSize * maxRL
      let widthNew = max (maxname*3 + maxname*maxTB) (GridSize * 4) //maxname*2 + maxname*maxTB
+=======
+     let heightNew = max (GridSize + GridSize * maxRL) 120
+    //  printf "%A" maxname
+     let widthNew = max (maxname*14 + maxname*maxTB*7 + symbol.Compo.Label.Length*10) (GridSize * 4) //maxname*2 + maxname*maxTB + symbol.Compo.Label.Length
+    //  printf "%A" widthNew
+>>>>>>> Stashed changes
      let newcompo = {symbol.Compo with H = heightNew}
      let newcompo'= {newcompo with W = widthNew}
      {symbol with Compo = newcompo'}
@@ -521,16 +562,16 @@ let redefineCustomHW symbol =
 
 let redefineCustomPorts symbol (map:Map<string,PortOrientationOffset>) : Map<string,PortOrientationOffset> =
 
-    let customOffsetHelper w h side il ir it ib r l b t : XYPos= 
-        let index,all =
+    let customOffsetHelper w h side sideIndex r l b t : XYPos= 
+        let all =
              match side with
-             |Right -> ir,r
-             |Left -> il,l
-             |Top -> it,t
-             |Bottom -> ib,b
+             |Right -> r
+             |Left -> l
+             |Top -> t
+             |Bottom -> b
         let gap = 1.0 
-        let offY = (float(h))* (( float(index) + gap )/( float( all ) + 2.0*gap - 1.0))  // the ports are created so that they are equidistant 
-        let offX = (float(w))* (( float(index) + gap )/( float( all ) + 2.0*gap - 1.0))
+        let offY = (float(h))* (( float(sideIndex) + gap )/( float( all ) + 2.0*gap - 1.0))  // the ports are created so that they are equidistant 
+        let offX = (float(w))* (( float(sideIndex) + gap )/( float( all ) + 2.0*gap - 1.0))
         // {X=50.0;Y=50.0}
         match side with
             |Left -> {X=0.0;Y=offY}
@@ -541,21 +582,13 @@ let redefineCustomPorts symbol (map:Map<string,PortOrientationOffset>) : Map<str
 
     let keys = map |> Map.toList |> List.map fst
     let values = map |> Map.toList |> List.map snd
-    let mutable il = 0
-    let mutable ir = 0
-    let mutable it = 0
-    let mutable ib = 0
     let r,b,l,t = countsides map
     let w,h = symbol.Compo.W, symbol.Compo.H //it needs the new height and width here based on spec above
-    let mutable valuesNew = []
-    for v in values do
-        valuesNew <- (valuesNew @ [{Side=v.Side;Offset=(customOffsetHelper w h v.Side il ir it ib r l b t)}])
-        if v.Side = Right then ir <- ir+1
-        else if v.Side = Left then il <- il+1
-        else if v.Side = Top then it <- it+1
-        else ib <- ib+1
+    // let mutable valuesNew = []
+    // for v in values do
+        // valuesNew <- (valuesNew @ [{Side=v.Side;Offset=(customOffsetHelper w h v.Side v.SideIndex r l b t);SideIndex= v.SideIndex}])
         // printf $"IL: %i{il}"
-
+    let valuesNew = List.map (fun v -> {Side=v.Side;Offset=(customOffsetHelper w h v.Side v.SideIndex r l b t);SideIndex= v.SideIndex}) values
     // printf $"New Y Offset: %f{valuesNew[0].Offset.Y}"    
 
 //    for i in valuesNew do

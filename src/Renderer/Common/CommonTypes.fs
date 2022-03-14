@@ -8,7 +8,7 @@ module CommonTypes
     //=================================================//
     // Faster version of Map for objects with SHA hash //
     //=================================================//
-
+    
     // Currently not used. Does it work?
     
     type HMap<'T> = 
