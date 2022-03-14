@@ -1,4 +1,4 @@
-﻿(*
+(*
 This module implements wires between symbol ports. Wires can be autorouted, or manually routed by dragging segments.
 Moving symbols causes the corresponding wires to move.
 Wires are read and written from Issie as lists of wire vertices, whatever teh internal representation is.
@@ -570,7 +570,7 @@ let view (model: Model) (dispatch: Dispatch<Msg>) =
                         match wire.OutputPort with
                         | OutputPortId stringId -> stringId
 
-                    let outputPortLocation = Symbol.getOnePortLocationNew model.Symbol stringOutId PortType.Output
+                    let outputPortLocation = Symbol.getOnePortLocationNew model.Symbol stringOutId PortType.Output // TODO: Symbol fn in BusWire
                     let props =
                         {
                             key = match wire.Id with | ConnectionId s -> s
@@ -749,7 +749,7 @@ let routeGivenWiresBasedOnPortPositions
             let mapWireSegments (wire: Wire) =
                 let segments =
                     let positions =
-                        Symbol.getTwoPortLocations
+                        Symbol.getTwoPortLocations // TODO: Symbol fn in BusWire
                         <| model.Symbol
                         <| wire.InputPort
                         <| wire.OutputPort
@@ -1120,7 +1120,7 @@ let init () =
 let getConnectedWires (model : Model) (componentIDs : ComponentId list) =
 
     let isConnected (wire: Wire) =
-        let inputs, outputs = Symbol.getPortLocations model.Symbol componentIDs
+        let inputs, outputs = Symbol.getPortLocations model.Symbol componentIDs // TODO: Symbol fn in BusWire
         Map.containsKey wire.InputPort inputs
                 || Map.containsKey wire.OutputPort outputs
 
@@ -1137,7 +1137,7 @@ let getConnectedWires (model : Model) (componentIDs : ComponentId list) =
 /// - those connected only to outputs
 /// - wires with both inputs and outputs connected
 let filterWiresByCompMoved (model: Model) (componentIDs: ComponentId list) =
-    let inputs, outputs = Symbol.getPortLocations model.Symbol componentIDs
+    let inputs, outputs = Symbol.getPortLocations model.Symbol componentIDs // TODO: Symbol fn in BusWire
 
     // List of all wires
     let wires =
@@ -1179,7 +1179,7 @@ let autorouteWire (model: Model) (wire: Wire): Wire =
     // Get the wire's port locations
     let locations =
         let inputs, outputs = wire.InputPort, wire.OutputPort
-        Symbol.getTwoPortLocations model.Symbol inputs outputs
+        Symbol.getTwoPortLocations model.Symbol inputs outputs // TODO: Symbol fn in BusWire
 
     // Autoroute a segment between the wire's ports, and assign it to the wire
     {
@@ -1468,8 +1468,8 @@ let updateWire (model: Model) (wire: Wire) (isInput: bool) =
     let newPort =
         let symbol = model.Symbol
         match isInput with
-            | true -> Symbol.getInputPortLocation symbol wire.InputPort
-            | false -> Symbol.getOutputPortLocation symbol wire.OutputPort
+            | true -> Symbol.getInputPortLocation symbol wire.InputPort // TODO: Symbol fn in BusWire
+            | false -> Symbol.getOutputPortLocation symbol wire.OutputPort // TODO: Symbol fn in BusWire
 
     // Partially route from input to end by reversing segments, and swapping
     // the start/end values.
@@ -1593,7 +1593,7 @@ let update (msg : Msg) (model : Model) : Model*Cmd<Msg> =
         updateWires model componentIdList diff, Cmd.none
 
     | AddWire ( (inputId, outputId) : (InputPortId * OutputPortId) ) ->
-        let portOnePos, portTwoPos = Symbol.getTwoPortLocations model.Symbol inputId outputId
+        let portOnePos, portTwoPos = Symbol.getTwoPortLocations model.Symbol inputId outputId // TODO: Symbol fn in BusWire
         let wireId = ConnectionId(JSHelpers.uuid())
         let segmentList = makeInitialASegList wireId (portOnePos, portTwoPos)
         
@@ -1856,7 +1856,7 @@ let pasteWires (wModel : Model) (newCompIds : ComponentId list) : (Model * Conne
             match Symbol.getEquivalentCopiedPorts wModel.Symbol oldCompIds newCompIds (oldWire.InputPort, oldWire.OutputPort) with
             | Some (newInputPort, newOutputPort) ->
 
-                let portOnePos, portTwoPos = Symbol.getTwoPortLocations wModel.Symbol (InputPortId newInputPort) (OutputPortId newOutputPort)
+                let portOnePos, portTwoPos = Symbol.getTwoPortLocations wModel.Symbol (InputPortId newInputPort) (OutputPortId newOutputPort) // TODO: Symbol fn in BusWire
                 let segmentList = makeInitialASegList newId (portOnePos, portTwoPos)
                 [
                     {
