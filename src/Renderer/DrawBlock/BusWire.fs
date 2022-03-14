@@ -118,7 +118,9 @@ type Wire =
         Segments: ASeg list
     }
 
-    with static member stickLength = 16.0
+    with
+        static member stickLength = 16.0
+        static member arcSize = 8.0
 
 ///
 type Model =
@@ -438,130 +440,81 @@ let makeInitialRISegList (hostId: ConnectionId) (portCoords: XYPos * XYPos) : RI
     |> List.map aSegToRISeg
     // TODO: native RISeg implementation
 
-/// Render given segment using colour and width properties given
-let renderSegment (segment: ASeg) (colour: string) (width: string) : ReactElement = 
-    let wOpt = EEExtensions.String.tryParseWith System.Int32.TryParse width
-    let renderWidth = 
-        match wOpt with
-        | Some 1 -> 1.5
-        | Some n when n < int "8" -> 2.5
-        | _ -> 3.5
-    let halfWidth = (renderWidth/2.0) - (0.75)
+/// Render given Rotation Invariant Segment using colour and width properties given
+/// Takes in 2 connecting segments to add rounded corners if appropriate
+let renderRISegAndCorner (colour: string) (width: string) (segments: RISeg * RISeg * RISeg) : ReactElement =
+    let prevSeg, segment', nextSeg = segments
+    let segment = {segment' with Start = absXYPos segment'.Start}
+    let widthOption = EEExtensions.String.tryParseWith System.Int32.TryParse width
+    let renderWidth, halfWidth = 
+        match widthOption with
+        | Some 1 -> 1.5, 0.25
+        | Some n when n < int "8" -> 2.5, 0.5
+        | _ -> 3.5, 1.0
     let lineParameters = { defaultLine with Stroke = colour; StrokeWidth = string renderWidth }
     let circleParameters = { defaultCircle with R = halfWidth; Stroke = colour; Fill = colour }
+    let pathParameters = { defaultPath with Stroke = colour; StrokeWidth = string renderWidth }
 
-    if segment.Dir = Horizontal then
-        let pathParameters = { defaultPath with Stroke = colour; StrokeWidth = string renderWidth }
+    // If first segment / previous or current segment too short /  collinear with previous segment -> no corner
+    let startCorner = not (prevSeg.Index = -1 || (min (abs prevSeg.Length) (abs segment.Length)) < (Wire.arcSize * 2.0) || prevSeg.Dir = segment.Dir)
 
-        let renderWireSubSegment (vertex1 : XYPos) (vertex2 : XYPos) : ReactElement list =
-            let Xa, Ya, Xb, Yb = vertex1.X, vertex1.Y, vertex2.X, vertex2.Y
-            makeLine Xa Ya Xb Yb lineParameters
-            ::
-            makeCircle Xa Ya circleParameters
-            ::
+    let endCorner =
+        // If last segment / current or next segment too short / collinear with next segment -> no corner
+        if nextSeg.Index = 0 || (min (abs segment.Length) (abs nextSeg.Length)) < (Wire.arcSize * 2.0) || segment.Dir = nextSeg.Dir then
+            let endPoint = getRISegEnd segment.Start segment
             [
-                makeCircle Xb Yb circleParameters
-            ]
-        
-        let segmentJumpHorizontalSize = 9.0
-        let segmentJumpVerticalSize = 6.0
-        
-        let renderSingleSegmentJump (intersectionCoordinate : XYPos) : ReactElement list =
-            let x, y = intersectionCoordinate.X, intersectionCoordinate.Y
-
-            let startingPoint = {X = x - segmentJumpHorizontalSize/2.0; Y = y}
-            let startingControlPoint = {X = x - segmentJumpHorizontalSize/2.0; Y = y - segmentJumpVerticalSize}
-            let endingControlPoint = {X = x + segmentJumpHorizontalSize/2.0; Y = y - segmentJumpVerticalSize}
-            let endingPoint = {X = x + segmentJumpHorizontalSize/2.0; Y = y}
-
-            makePath startingPoint startingControlPoint endingControlPoint endingPoint pathParameters
-            ::
-            makeCircle startingPoint.X startingPoint.Y circleParameters
-            ::
+                makeCircle endPoint.X endPoint.Y circleParameters
+            ], false
+        else // Corner
+            let arcStart =
+                match segment.Length with
+                | l when l < 0 -> getRISegEnd segment.Start {segment with Length = segment.Length + Wire.arcSize}
+                | _ -> getRISegEnd segment.Start {segment with Length = segment.Length - Wire.arcSize}
+            let arcMid = nextSeg.Start
+            let arcEnd =
+                match nextSeg.Length with
+                | l when l < 0 -> getRISegEnd nextSeg.Start {nextSeg with Length = - Wire.arcSize}
+                | _ -> getRISegEnd nextSeg.Start {nextSeg with Length = Wire.arcSize}
             [
-                makeCircle endingPoint.X endingPoint.Y circleParameters
-            ]
-        
-        let rec renderMultipleSegmentJumps (segmentJumpCoordinateList : float list) (segmentJumpYCoordinate : float) : ReactElement list =
-            
-            match segmentJumpCoordinateList with
+                makeCircle arcStart.X arcStart.Y circleParameters
+                makePath arcStart arcMid arcEnd arcEnd pathParameters
+                makeCircle arcEnd.X arcEnd.Y circleParameters
+            ], true
 
-            | [] -> []
+    let segmentElements =
+        let segStart =
+            match startCorner, segment.Length with
+            | true, l when l < 0 -> getRISegEnd segment.Start {segment with Length = - Wire.arcSize}
+            | true, _ -> getRISegEnd segment.Start {segment with Length = Wire.arcSize}
+            | false, _ -> segment.Start
+        let segEnd =
+            match (snd endCorner), segment.Length with
+            | true, l when l < 0 -> getRISegEnd segment.Start {segment with Length = segment.Length + Wire.arcSize}
+            | true, _ -> getRISegEnd segment.Start {segment with Length = segment.Length - Wire.arcSize}
+            | false, _ -> getRISegEnd segment.Start segment
+        [
+            makeLine segStart.X segStart.Y segEnd.X segEnd.Y lineParameters
+        ]
+        @
+        fst endCorner
+
+    g [] segmentElements
 
 
-            | [singleElement] ->
-                renderSingleSegmentJump {X = singleElement; Y = segmentJumpYCoordinate}
-
-
-            | firstElement :: secondElement :: tailList ->
-
-                if (segment.Start.X > segment.End.X) then
-                    renderSingleSegmentJump {X = firstElement; Y = segmentJumpYCoordinate}
-                    @
-                    renderWireSubSegment {X = firstElement - segmentJumpHorizontalSize/2.0; Y = segmentJumpYCoordinate} {X = secondElement + segmentJumpHorizontalSize/2.0; Y = segmentJumpYCoordinate}
-                    @
-                    renderMultipleSegmentJumps (secondElement :: tailList) (segmentJumpYCoordinate)
-                
-                else
-                    renderSingleSegmentJump {X = firstElement; Y = segmentJumpYCoordinate}
-                    @
-                    renderWireSubSegment {X = firstElement + segmentJumpHorizontalSize/2.0; Y = segmentJumpYCoordinate} {X = secondElement - segmentJumpHorizontalSize/2.0; Y = segmentJumpYCoordinate}
-                    @
-                    renderMultipleSegmentJumps (secondElement :: tailList) (segmentJumpYCoordinate)
-            
-
-        let completeWireSegmentRenderFunction (seg : ASeg) : ReactElement list =
-            
-            let jumpCoordinateList =
-                if (segment.Start.X > segment.End.X) then
-                    seg.JumpCoordinateListA
-                    |> List.map fst
-                    |> List.sortDescending
-                    
-                else
-                    seg.JumpCoordinateListA
-                    |> List.map fst
-                    |> List.sort
-            
-            match jumpCoordinateList with
-                | [] -> renderWireSubSegment seg.Start seg.End
-
-                | lst ->
-                     let y = seg.Start.Y // SHOULD be equal to seg.End.Y since ONLY horizontal segments have jumps
-                     let firstSegmentJumpCoordinate = lst[0]
-                     let lastSegmentJumpCoordinate = lst[(List.length lst) - 1]
-
-                     if (segment.Start.X > segment.End.X) then
-                         renderWireSubSegment seg.Start {X = firstSegmentJumpCoordinate + segmentJumpHorizontalSize/2.0; Y = y}
-                         @
-                         renderMultipleSegmentJumps lst y
-                         @
-                         renderWireSubSegment {X = lastSegmentJumpCoordinate - segmentJumpHorizontalSize/2.0; Y = y} seg.End
-
-                     else
-                         renderWireSubSegment seg.Start {X = firstSegmentJumpCoordinate - segmentJumpHorizontalSize/2.0; Y = y}
-                         @
-                         renderMultipleSegmentJumps lst y
-                         @
-                         renderWireSubSegment {X = lastSegmentJumpCoordinate + segmentJumpHorizontalSize/2.0; Y = y} seg.End
-        
-
-        let wireSegmentReactElementList = segment
-                                          |> completeWireSegmentRenderFunction
-
-        g [] wireSegmentReactElementList
-    
-    else
-        let Xa, Ya, Xb, Yb = segment.Start.X, segment.Start.Y, segment.End.X, segment.End.Y
-        let segmentElements = 
-            makeLine Xa Ya Xb Yb lineParameters
-            ::
-            makeCircle Xa Ya circleParameters
-            ::
-            [
-                makeCircle Xb Yb circleParameters
-            ]
-        g [] segmentElements
+/// Takes in a Rotation Invariant Segment List and renders the resulting React Element List, with rounded corners if appropriate
+let renderRISegList (colour: string) (width: string) (segs: RISeg list) : ReactElement list =
+    let riSegs =
+        segs
+        |> List.filter ( fun seg -> seg.Length <> 0.0 )
+        |> List.mapi (fun i seg -> {seg with Index = i})
+        |> List.toSeq
+    let dummyStartRISeg = {Seq.head riSegs with Index = -1; Length = 0.0}
+    let dummyEndRISeg = {Seq.head riSegs with Index = 0; Length = 0.0}
+    let riSegTriplets =
+        Seq.zip3 (Seq.append [dummyStartRISeg] riSegs) riSegs (Seq.append (Seq.tail riSegs) [dummyEndRISeg])
+        |> List.ofSeq
+    riSegTriplets
+    |> List.map ( fun segTrip -> renderRISegAndCorner colour width segTrip )
 
 ///
 type WireRenderProps =
@@ -578,8 +531,8 @@ let singleWireView =
         fun (props: WireRenderProps) ->
             let renderWireSegmentList : ReactElement list =
                 props.Segments
-                |> List.map ( fun (segment: ASeg) -> renderSegment segment (props.ColorP.Text()) (string props.StrokeWidthP) )
-                // Call render helper functions on each segment, including jump rendering
+                |> List.map aSegToRISeg
+                |> renderRISegList (props.ColorP.Text()) (string props.StrokeWidthP)
 
             let renderWireWidthText : ReactElement =
                 let textParameters =
