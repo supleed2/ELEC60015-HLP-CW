@@ -394,30 +394,30 @@ let segmentIntersectsSegment ((p1', q1') : (XYPos * XYPos)) ((p2', q2') : (XYPos
     // the manual or auto route info per segment should be a separate field in Segmnet, not encoded in the sign of the coordinates
     // that is needed when writing out or reading from Issie, but the write/read process can easily translate to a sane internal data structure in the draw blokc model
     let p1, q1, p2, q2 = absXYPos p1', absXYPos q1', absXYPos p2', absXYPos q2' // TODO: Fix import function so this can be removed
-    let commonCoord (segStart: XYPos) (segEnd: XYPos) : (Orientation * float) =
+    let segmentOrientation (segStart: XYPos) (segEnd: XYPos) : Orientation =
         match segStart with
-        | {X = x} when segStart.X = segEnd.X -> Vertical, x
-        | {Y = y} when segStart.Y = segEnd.Y -> Horizontal, y
+        | _ when segStart.X = segEnd.X -> Vertical
+        | _ when segStart.Y = segEnd.Y -> Horizontal
         | _ -> failwithf "Segment must have a common coordinate"
     
-    let seg1Ori, seg1Coord = commonCoord p1 q1
-    let seg2Ori, seg2Coord = commonCoord p2 q2
+    let seg1Ori = segmentOrientation p1 q1
+    let seg2Ori = segmentOrientation p2 q2
     
     if seg1Ori = seg2Ori then
         false
     elif seg1Ori = Horizontal then
         ( // seg 1 horizontal and seg 2 vertical
-            seg1Coord >= min p2.Y q2.Y &&
-            seg1Coord <= max p2.Y q2.Y &&
-            seg2Coord >= min p1.X q1.X &&
-            seg2Coord <= max p1.X q1.X
+            p1.Y >= min p2.Y q2.Y &&
+            p1.Y <= max p2.Y q2.Y &&
+            p2.X >= min p1.X q1.X &&
+            p2.X <= max p1.X q1.X
         )
     else
         ( // seg 1 vertical and seg 2 horizontal
-            seg1Coord >= min p2.X q2.X &&
-            seg1Coord <= max p2.X q2.X &&
-            seg2Coord >= min p1.Y q1.Y &&
-            seg2Coord <= max p1.Y q1.Y
+            p1.X >= min p2.X q2.X &&
+            p1.X <= max p2.X q2.X &&
+            p2.Y >= min p1.Y q1.Y &&
+            p2.Y <= max p1.Y q1.Y
         )
 
 ///Returns the absolute segment with positive Start and End coordinates
