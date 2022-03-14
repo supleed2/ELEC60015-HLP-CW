@@ -512,8 +512,8 @@ let redefineCustomHW symbol =
      let r,b,l,t = countsides symbol.APortOffsetsMap
      let maxRL = max r l
      let maxTB = max t b
-     let heightNew = 100 //GridSize + GridSize * maxRL
-     let widthNew = max (maxname*2 + maxname*maxTB) (GridSize * 4) //maxname*2 + maxname*maxTB
+     let heightNew = GridSize + GridSize * maxRL
+     let widthNew = max (maxname*3 + maxname*maxTB) (GridSize * 4) //maxname*2 + maxname*maxTB
      let newcompo = {symbol.Compo with H = heightNew}
      let newcompo'= {newcompo with W = widthNew}
      {symbol with Compo = newcompo'}
@@ -1372,9 +1372,7 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
             | _ -> failwithf "Side not implemented"
    
         let symbol' = {tempsym with APortOffsetsMap = (changePortSide tempsym.APortOffsetsMap portName newSide tempsym)}
-        //let symbol'' = {redefineCustomHW} ->
         let symbol'' = redefineCustomHW symbol'
-        //{symbol'' with map = redefineportmap}
         let symbol'''  = {symbol'' with APortOffsetsMap = redefineCustomPorts symbol'' symbol'.APortOffsetsMap}
         { model with Symbols = Map.add sId symbol''' model.Symbols }, Cmd.none
 
