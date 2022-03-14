@@ -649,7 +649,6 @@ let mDownUpdate (model: Model) (mMsg: MouseT) : Model * Cmd<Msg> =
                 Cmd.batch [ symbolCmd (Symbol.SelectSymbols [])
                             wireCmd (BusWire.SelectWires [ connId ])
                             wireCmd (BusWire.DragWire (connId, mMsg))
-                            wireCmd (BusWire.ResetJumps [ connId ] )
                             Cmd.ofMsg msg]
         | Canvas ->
             let newComponents, newWires =
@@ -677,7 +676,7 @@ let mDragUpdate (model: Model) (mMsg: MouseT) : Model * Cmd<Msg> =
     | InitialiseMoving _ ->
         let movingWires = BusWire.getConnectedWires model.Wire model.SelectedComponents
         let newModel, cmd = moveSymbols model mMsg
-        newModel, Cmd.batch [ cmd; wireCmd (BusWire.ResetJumps movingWires) ]
+        newModel, cmd
     | MovingSymbols | DragAndDrop ->
         moveSymbols model mMsg
     | ConnectingInput _ -> 
@@ -724,8 +723,7 @@ let mUpUpdate (model: Model) (mMsg: MouseT) : Model * Cmd<Msg> = // mMsg is curr
     match model.Action with
     | MovingWire connId ->
         { model with Action = Idle ; UndoList = appendUndoList model.UndoList newModel; RedoList = [] },
-        Cmd.batch [ wireCmd (BusWire.DragWire (connId, mMsg))
-                    wireCmd (BusWire.MakeJumps [ connId ] ) ]
+        wireCmd (BusWire.DragWire (connId, mMsg))
     | Selecting ->
         let newComponents = findIntersectingComponents model model.DragToSelectBox
         let newWires = BusWire.getIntersectingWires model.Wire model.DragToSelectBox
@@ -748,7 +746,6 @@ let mUpUpdate (model: Model) (mMsg: MouseT) : Model * Cmd<Msg> = // mMsg is curr
         // Reset Movement State in Model
         match model.ErrorComponents with 
         | [] ->
-            let movingWires = BusWire.getConnectedWires model.Wire model.SelectedComponents
             {model with
                 // BoundingBoxes = Symbol.getBoundingBoxes model.Wire.Symbol 
                 Action = Idle
@@ -757,7 +754,7 @@ let mUpUpdate (model: Model) (mMsg: MouseT) : Model * Cmd<Msg> = // mMsg is curr
                 UndoList = appendUndoList model.UndoList newModel
                 RedoList = []
                 AutomaticScrolling = false },
-            wireCmd (BusWire.MakeJumps movingWires)
+            Cmd.none
         | _ ->
             let movingWires = BusWire.getConnectedWires model.Wire model.SelectedComponents
             {model with
@@ -768,8 +765,7 @@ let mUpUpdate (model: Model) (mMsg: MouseT) : Model * Cmd<Msg> = // mMsg is curr
                 AutomaticScrolling = false }, 
             Cmd.batch [ symbolCmd (Symbol.MoveSymbols (model.SelectedComponents, (posDiff model.LastValidPos mMsg.Pos)))
                         symbolCmd (Symbol.SelectSymbols (model.SelectedComponents))
-                        wireCmd (BusWire.UpdateWires (model.SelectedComponents, posDiff model.LastValidPos mMsg.Pos))
-                        wireCmd (BusWire.MakeJumps movingWires) ]
+                        wireCmd (BusWire.UpdateWires (model.SelectedComponents, posDiff model.LastValidPos mMsg.Pos)) ]
     | ConnectingInput inputPortId ->
         let cmd, undoList ,redoList =
             if model.TargetPortId <> "" // If a target has been found, connect a wire
