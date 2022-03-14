@@ -546,15 +546,10 @@ let redefineCustomHW symbol =
      let r,b,l,t = countsides symbol.APortOffsetsMap
      let maxRL = max r l
      let maxTB = max t b
-<<<<<<< Updated upstream
-     let heightNew = GridSize + GridSize * maxRL
-     let widthNew = max (maxname*3 + maxname*maxTB) (GridSize * 4) //maxname*2 + maxname*maxTB
-=======
      let heightNew = max (GridSize + GridSize * maxRL) 120
     //  printf "%A" maxname
      let widthNew = max (maxname*14 + maxname*maxTB*7 + symbol.Compo.Label.Length*10) (GridSize * 4) //maxname*2 + maxname*maxTB + symbol.Compo.Label.Length
     //  printf "%A" widthNew
->>>>>>> Stashed changes
      let newcompo = {symbol.Compo with H = heightNew}
      let newcompo'= {newcompo with W = widthNew}
      {symbol with Compo = newcompo'}
