@@ -8,9 +8,8 @@ module CommonTypes
     //=================================================//
     // Faster version of Map for objects with SHA hash //
     //=================================================//
-    
+    type Rotation = R0 | R90 | R180 | R270
     // Currently not used. Does it work?
-    
     type HMap<'T> = 
         | Tree of HMap<'T> array
         | Found of 'T
@@ -319,7 +318,8 @@ module CommonTypes
         Y : int
         H : int
         W : int
-        D : int list
+        R : Rotation
+        SI : (int*int) List 
     }
 
     /// JSConnection mapped to F# record.

@@ -1,4 +1,16 @@
-﻿//---------------------------------------------------------------------------------//
+﻿//keep old drawing style but with new functions  -> DONE
+//genAportoffsetmap -> different for mux adder (ports not on LHS/RHS), -> easy to change symbols in the future
+//rotation of these components is different as well -> TO ADD
+//add new addClock -> work with floats instead of ints
+//complete rotation for all symbols -> pending 6 + 7 points symbols
+//Output same rotation as input with rotation (o+2)%4  
+//function to create map for custom components port names -> DONE
+//add extensions as Maps in PortNamesMap 
+// change in points the w,h to floats in the begining??
+//change names and if found better types
+//why adder ports needs different rotation function??? 
+
+//---------------------------------------------------------------------------------//
 //--------------------AP1919 CODE SECTION STARTS-------------------------------------//
 //---------------------------------------------------------------------------------//
 
@@ -20,16 +32,15 @@ open System.Text.RegularExpressions
 
 
 /// --------- STATIC VARIABLES --------- ///
+
 let GridSize = 30 
 
-// let (x:ComponentType List) = [MergeWires ;(SplitWire,a);Mux2 ;NbitsAdder x; IOLabel]
 /// ---------- SYMBOL TYPES ---------- ///
-type Rotation = R0 | R90 | R180 | R270
 
 type PortOrientation = Right | Bottom | Left | Top
 
 type PortOrientationOffset = {
-    Side: PortOrientation //on which side a port is located : Right - Bottom - Left - Top
+    Side: PortOrientation // Designated which side of symbol port is on (0 -> right, 1 -> top, 2 -> left, 3 -> bottom). to have coherency with STransform.
     Offset: XYPos
     SideIndex: int
 }
@@ -37,7 +48,7 @@ type PortOrientationOffset = {
 type Symbol =
     {
         Pos: XYPos
-        STransform: Rotation //How a symbol is rotated/flipped (R0 -> 0 deg, R90 -> 90 deg, R180 -> 180 deg, -> R270 -> 270 deg).
+        STransform: Rotation // Describes how symbol is rotated/flipped (0 -> 0 deg, 1 -> 90 deg, 2 -> 180 deg, -> 3 -> 270 deg).
         InWidth0: int option
         InWidth1: int option
         Id : ComponentId       
@@ -92,7 +103,7 @@ type Msg =
     | WriteMemoryLine of ComponentId * int64 * int64 // For Issie Integration 
     | WriteMemoryType of ComponentId * ComponentType
 
-//---------------------------------helper types and fuFnctions----------------//
+//---------------------------------helper types and functions----------------//
 
 let posDiff (a:XYPos) (b:XYPos) =
     {X=a.X-b.X; Y=a.Y-b.Y}
@@ -109,6 +120,23 @@ let stransform_fsm(prev_state:Rotation):Rotation =
     | R90 -> R180
     | R180 -> R270
     | R270 -> R0
+
+
+let orientationEncoder (orientation:PortOrientation) : int = 
+    match orientation with
+    | Right -> 0
+    | Bottom -> 1
+    | Left -> 2
+    | Top -> 3
+
+let orientationDecoder (orientation:int) : PortOrientation = 
+    match orientation with
+    | 0 -> Right
+    | 1 -> Bottom
+    | 2 -> Left
+    | 3 -> Top
+    | _ -> Right
+
 
 // ----- helper functions for titles ----- //
 
@@ -229,7 +257,7 @@ let portListGen numOfPorts hostID portType =
             }])
 
 /// Helper function to initialise each type of component
-let createComponent (pos: XYPos) (comptype: ComponentType) (id:string) (label:string) : Component =
+let createComponent (pos: XYPos) (comptype: ComponentType) (id:string) (label:string) rotation : Component =
     
     // match statement for each component type. the output is a 4-tuple that is used as an input to makecomponent (see below)
     // 4-tuple of the form ( number of input ports, number of output ports, Height, Width)
@@ -268,20 +296,14 @@ let createComponent (pos: XYPos) (comptype: ComponentType) (id:string) (label:st
         | Custom x -> 
             let h = GridSize + GridSize * (List.max [List.length x.InputLabels; List.length x.OutputLabels])
             let maxInLength, maxOutLength = customCompMaxLabel x.InputLabels, customCompMaxLabel x.OutputLabels
-            let maxname = max maxInLength maxOutLength
-            // let maxW = maxInLength + maxOutLength + label.Length
-            // let scaledW = roundToZ GridSize (maxW * GridSize / 5) //Divide by 5 is just abitrary as otherwise the symbols would be too wide 
-            let w = max (maxname*14 + label.Length*10) (GridSize * 4)
-            // let w = max scaledW (GridSize * 4) //Ensures a minimum width if the labels are very small
-
+            let maxW = maxInLength + maxOutLength + label.Length
+            let scaledW = roundToZ GridSize (maxW * GridSize / 5) //Divide by 5 is just abitrary as otherwise the symbols would be too wide 
+            let w = max scaledW (GridSize * 4) //Ensures a minimum width if the labels are very small
             ( List.length x.InputLabels, List.length x.OutputLabels, h ,  w)
-
-
-
 
     
     // function that helps avoid dublicate code by initialising parameters that are the same for all component types and takes as argument the others
-    let createComponent' (inputPortsNo, outputPortsNo, h, w) label : Component=  
+    let createComponent' (inputPortsNo, outputPortsNo, h, w) label rotation: Component=  
         {
             Id = id 
             Type = comptype 
@@ -292,15 +314,16 @@ let createComponent (pos: XYPos) (comptype: ComponentType) (id:string) (label:st
             Y = int (pos.Y - float h / 2.0) 
             H = h 
             W = w
-            D = [0]
+            R = rotation
+            SI = []   
         }
 
-    createComponent' characteristics label
+    createComponent' characteristics label rotation
    
 /// Function to generate a new symbol
-let createNewSymbol (pos: XYPos) (comptype: ComponentType) (label:string) =
+let createNewSymbol (pos: XYPos) (comptype: ComponentType) (label:string) rotation =
     let id = JSHelpers.uuid ()
-    let comp = createComponent pos comptype id label
+    let comp = createComponent pos comptype id label rotation
     { 
       Pos = { X = pos.X - float comp.W / 2.0; Y = pos.Y - float comp.H / 2.0 }
       STransform = R0;
@@ -500,7 +523,7 @@ let getSides (map:Map<string,PortOrientationOffset>) =
      let lst = Map.toList map
      let sides = lst |> List.map (fun x -> 
          match x with
-         |(a,{Side=b;Offset=c}) -> b
+         |(a,{Side=b;Offset=c;SideIndex=d}) -> b
      )
      sides |> List.map (fun x -> 
          match x with 
@@ -546,18 +569,17 @@ let redefineCustomHW symbol =
      let r,b,l,t = countsides symbol.APortOffsetsMap
      let maxRL = max r l
      let maxTB = max t b
-     let heightNew = max (GridSize + GridSize * maxRL) 120
+     let heightNew = (GridSize + GridSize * maxRL)
     //  printf "%A" maxname
-     let widthNew = max (maxname*14 + maxname*maxTB*7 + symbol.Compo.Label.Length*10) (GridSize * 4) //maxname*2 + maxname*maxTB + symbol.Compo.Label.Length
+     let widthN = max (maxname*14 + symbol.Compo.Label.Length*10) (maxname*14 + maxname*maxTB*7) //find width required to fit everything
     //  printf "%A" widthNew
+     let widthNew = max widthN (GridSize * 4)  //ensure minimum width if names too small
      let newcompo = {symbol.Compo with H = heightNew}
      let newcompo'= {newcompo with W = widthNew}
      {symbol with Compo = newcompo'}
 
 
-let redefineCustomPorts symbol (map:Map<string,PortOrientationOffset>) : Map<string,PortOrientationOffset> =
-
-    let customOffsetHelper w h side sideIndex r l b t : XYPos= 
+let customOffsetHelper w h side sideIndex r l b t : XYPos= 
         let all =
              match side with
              |Right -> r
@@ -574,7 +596,7 @@ let redefineCustomPorts symbol (map:Map<string,PortOrientationOffset>) : Map<str
             |Right -> {X=float(w);Y=offY}
             |Bottom -> {X=offX;Y=float(h)}
 
-
+let redefineCustomPorts symbol (map:Map<string,PortOrientationOffset>) : Map<string,PortOrientationOffset> =
     let keys = map |> Map.toList |> List.map fst
     let values = map |> Map.toList |> List.map snd
     let r,b,l,t = countsides map
@@ -661,7 +683,7 @@ let DrawPorts (portMap: Map<string,PortOrientationOffset>) o (showInput:bool) (s
             match key,port with
             |k,{Side=side;Offset={X=x;Y=y}} -> if (k[0] = 'I' && showInput) || (k[0]='O' && showOutput) then makeCircle x y portCircle else nothing 
         )
-        mid |> Map.toList |> List.map snd
+        mid |> Map.values |> List.ofSeq
 
 ///Draw the corresponding text of all ports contained in APortOffsetMap
 let DrawPortsText (portMap:Map<string,PortOrientationOffset>) (comp: Component) symbol orientation = 
@@ -676,7 +698,7 @@ let DrawPortsText (portMap:Map<string,PortOrientationOffset>) (comp: Component) 
             |Bottom -> (addText (port.Offset.X) (port.Offset.Y-20.0)  name "Middle" "normal" "12px")[0]  //they are added in a list at the end
             |Left-> (addText (port.Offset.X+5.0) (port.Offset.Y-7.0) name "start" "normal" "12px")[0]  
             |Top -> (addText (port.Offset.X) (port.Offset.Y+7.0)  name "Middle" "normal" "12px")[0]        )
-        mid |> Map.toList |> List.map snd
+        mid |> Map.values |> List.ofSeq
 
 
 let private createPolygon points colour opacity = 
@@ -731,7 +753,7 @@ let addConstantLine w h rotation opacity =
 let drawGateType w h comp = 
     let gType = getTitle comp
     let posX,posY =
-        match comp.Type with 
+        match comp.Type with
         |_ -> (w/2.0), (h/2.0 - 7.0)
     addText posX posY gType "middle" "bold" "14px"
 
@@ -766,6 +788,7 @@ let drawSymbol (symbol:Symbol) (comp:Component) (colour:string) (showInputPorts:
     let rotation = symbol.STransform
 
     let hR,wR = match symbol.STransform with |R90|R270 -> w,h |_ -> h,w     //new height,width after rotation 
+    // let hR,wR = h,w
 
     let mergeSplitLine posX1 posX2 posY msb lsb =
         let text = 
@@ -895,9 +918,10 @@ let view (model : Model) (dispatch : Msg -> unit) =
 //---------------------------------------------------------------------------------//
 //--------------------AP1919 CODE SECTION ENDS-------------------------------------//
 //---------------------------------------------------------------------------------//
-//---------------------------------------------------------------------------------//
-//--------------------GV319 CODE SECTION 2 STARTS-------------------------------------//
-//---------------------------------------------------------------------------------//
+
+
+
+
 
 //------------------------GET BOUNDING BOXES FUNCS--------------------------------used by sheet.
 // Function that returns the bounding box of a symbol. It is defined by the height and the width as well as the x,y position of the symbol
@@ -1171,15 +1195,15 @@ let generateLabel (model: Model) (compType: ComponentType) : string =
 /// Interface function to paste symbols. Is a function instead of a message because we want an output
 /// Currently drag-and-drop
 let pasteSymbols (symModel: Model) (mPos: XYPos) : Model * ComponentId list =
-    let createNewSymbol (basePos: XYPos) ((currSymbolModel, pastedIdsList) : Model * ComponentId List) (oldSymbol: Symbol): Model * ComponentId List =
+    let createNewSymbol (basePos: XYPos) ((currSymbolModel, pastedIdsList) : Model * ComponentId List) (oldSymbol: Symbol) : Model * ComponentId List =
         let newId = JSHelpers.uuid()
-        let posDiff = posDiff oldSymbol.Pos basePos
-        let newPos = posAdd posDiff mPos
+        let posDist = posDiff oldSymbol.Pos basePos
+        let newPos = posAdd posDist mPos
         
         let pastedSymbol =
             { oldSymbol with
                 Id = ComponentId newId
-                Compo = createComponent newPos oldSymbol.Compo.Type newId (labelGenNumber { symModel with Symbols = currSymbolModel.Symbols } oldSymbol.Compo.Type oldSymbol.Compo.Label) // TODO: Change label later
+                Compo = createComponent newPos oldSymbol.Compo.Type newId (labelGenNumber { symModel with Symbols = currSymbolModel.Symbols } oldSymbol.Compo.Type oldSymbol.Compo.Label) R0// TODO: Change label later
                 Pos = newPos
                 ShowInputPorts = false
                 ShowOutputPorts = false }
@@ -1200,11 +1224,11 @@ let pasteSymbols (symModel: Model) (mPos: XYPos) : Model * ComponentId list =
         ((symModel, []), oldSymbolsList) ||> List.fold (createNewSymbol basePos)
     | [] -> symModel, []
 
-
+    
 /// Given two componentId list of same length and input / output ports that are in list 1, return the equivalent ports in list 2.
 /// ComponentIds at same index in both list 1 and list 2 need to be of the same ComponentType
 /// CompIds1 need to be in model.CopiedSymbols
-let getEquivalentCopiedPorts (model: Model) copiedIds pastedIds (InputPortId copiedInputPort, OutputPortId copiedOutputPort) =
+let getEquivalentCopiedPorts (model: Model) (copiedIds) (pastedIds) (InputPortId copiedInputPort, OutputPortId copiedOutputPort) =
     let findEquivalentPorts compId1 compId2 =
         let copiedComponent = model.CopiedSymbols[compId1].Compo
         let pastedComponent = model.Symbols[compId2].Compo // TODO: These can be different for an output gate for some reason.
@@ -1237,13 +1261,12 @@ let getEquivalentCopiedPorts (model: Model) copiedIds pastedIds (InputPortId cop
   
  
 /// Given a model return a model with a new Symbol and also the component id
-let addSymbol (model: Model) pos compType lbl =
-    let newSym = createNewSymbol pos compType lbl
+let addSymbol (model: Model) pos compType lbl rotation=
+    let newSym = createNewSymbol pos compType lbl rotation
     let newSymbolWithMap = {newSym with APortOffsetsMap = (genAPortOffsets newSym newSym.Compo.Type)} 
     let newPorts = addPortsToModel model newSymbolWithMap
     let newSymModel = Map.add newSymbolWithMap.Id newSymbolWithMap model.Symbols
     { model with Symbols = newSymModel; Ports = newPorts }, newSymbolWithMap.Id
-
 
 // Helper function to change the number of bits expected in a port of each component type
 let changeNumberOfBitsf (symModel:Model) (compId:ComponentId) (newBits : int) =
@@ -1268,7 +1291,7 @@ let changeNumberOfBitsf (symModel:Model) (compId:ComponentId) (newBits : int) =
     {symbol with Compo = newcompo}
 
 // Helper function to change the number of bits expected in the LSB port of BusSelection and BusCompare
-let changeLSBbits (symModel:Model) (compId:ComponentId) (newLsb:int64) =
+let changeLsbf (symModel:Model) (compId:ComponentId) (newLsb:int64) =
     let symbol = Map.find compId symModel.Symbols
     let newcompotype = 
         match symbol.Compo.Type with
@@ -1279,8 +1302,7 @@ let changeLSBbits (symModel:Model) (compId:ComponentId) (newLsb:int64) =
     let newcompo = {symbol.Compo with Type = newcompotype}
     {symbol with Compo = newcompo}
 
-// Helper function to change the name and value of a Constant Symbol
-let changeConstant (symModel:Model) (compId:ComponentId) (constantVal:int64) (constantText: string) =
+let changeConstantf (symModel:Model) (compId:ComponentId) (constantVal:int64) (constantText: string) =
     let symbol = Map.find compId symModel.Symbols
     let newcompotype = 
         match symbol.Compo.Type with
@@ -1298,7 +1320,7 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
         { model with Symbols = newSymbols }, Cmd.none //filters out symbol with a specified id
 
     | AddSymbol (pos,compType, lbl) ->
-        let newModel, _ = addSymbol model pos compType lbl
+        let newModel, _ = addSymbol model pos compType lbl R0
         newModel, Cmd.none
 
     | CopySymbols compIds ->
@@ -1341,16 +1363,18 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
         let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
         let newSymbols =
             (List.fold (fun prevSymbols sId -> Map.add sId {resetSymbols[sId] with Colour = "lightgreen"} prevSymbols) resetSymbols compList)
-        { model with Symbols = newSymbols }, Cmd.none
+        { model with Symbols = newSymbols }, Cmd.none  
 
-    | RotateSymbols compList -> // NEW: select a symbol to Rotate
+    | RotateSymbols compList -> //select a symbol to Rotate
         let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
-        let newSymbols =
-            // The selected symbol is rotated by incrementing Stransform rotation and updating new APortOffsetsMap and Symbol Pos 
+        let newSymbols = 
+            // if ctrl is pressed make yellow initially, then try to change STransform for every time ctrl+R is pressed
             List.fold (fun prevSymbols sId ->
-                Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(model.Symbols[sId].STransform); APortOffsetsMap = rotatePortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
+                let compo = model.Symbols[sId].Compo
+                // let hR,wR = match stransform_fsm(model.Symbols[sId].STransform) with |R90|R270 -> compo.W,compo.H |_ -> compo.H,compo.W 
+                let newcompo = {compo with R = stransform_fsm (model.Symbols[sId].STransform);}
+                Map.add sId {model.Symbols[sId] with Compo = newcompo ; STransform = stransform_fsm(model.Symbols[sId].STransform); APortOffsetsMap = rotatePortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
         { model with Symbols = newSymbols }, Cmd.none
-    
     | FlipHSymbols compList -> // NEW: flip a symbol Horizontally
         let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
         let newSymbols =
@@ -1366,7 +1390,7 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
             List.fold (fun prevSymbols sId ->
                 Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(stransform_fsm(model.Symbols[sId].STransform)); APortOffsetsMap = flipVPortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
         { model with Symbols = newSymbols }, Cmd.none
-    
+
     | ErrorSymbols (errorCompList,selectCompList,isDragAndDrop) -> 
         let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
         let selectSymbols =
@@ -1380,7 +1404,7 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
             (List.fold (fun prevSymbols sId -> Map.add sId {resetSymbols[sId] with Colour = "Red"} prevSymbols) selectSymbols errorCompList)
         { model with Symbols = newSymbols }, Cmd.none 
         
-    | MouseMsg _ -> model, Cmd.none // allow unused mouse messages
+    | MouseMsg _ -> model, Cmd.none // allow unused mouse messags
 
     | ChangeLabel (sId, newLabel) ->
         let tempsym = Map.find sId model.Symbols
@@ -1388,6 +1412,12 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
         let addsym = {tempsym with Compo = newcompo}
         { model with Symbols = Map.add sId addsym model.Symbols }, Cmd.none
     | ChangePort (sId, portName, portSide) ->
+        let extract map =
+            let lst = map |> Map.toList
+            lst |> List.map (fun x -> 
+                match x with
+                |(a,{Side=b;Offset=c;SideIndex=d}) -> ((orientationEncoder b),d)
+            )
         let tempsym = Map.find sId model.Symbols
         printf $"Selected Port: %s{portName}"
         printf $"Selected Side: %s{portSide}"
@@ -1398,11 +1428,13 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
             | "Left"   -> Left
             | "Right"  -> Right
             | _ -> failwithf "Side not implemented"
-   
+
         let symbol' = {tempsym with APortOffsetsMap = (changePortSide tempsym.APortOffsetsMap portName newSide tempsym)}
         let symbol'' = redefineCustomHW symbol'
         let symbol'''  = {symbol'' with APortOffsetsMap = redefineCustomPorts symbol'' symbol'.APortOffsetsMap}
-        { model with Symbols = Map.add sId symbol''' model.Symbols }, Cmd.none
+        let newcompo = {symbol'''.Compo with SI=extract symbol'''.APortOffsetsMap}
+        let symbol'''' = {symbol''' with Compo = newcompo}
+        { model with Symbols = Map.add sId symbol'''' model.Symbols }, Cmd.none
 
     | PasteSymbols compList ->
         let newSymbols =
@@ -1421,13 +1453,13 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
         { model with Symbols = newSymbolsWithChangedSymbol }, Cmd.none
     
     | ChangeLsb (compId, newLsb) -> 
-        let newsymbol = changeLSBbits model compId newLsb
+        let newsymbol = changeLsbf model compId newLsb
         let symbolswithoutone = model.Symbols.Remove compId
         let newSymbolsWithChangedSymbol = symbolswithoutone.Add (compId, newsymbol)
         { model with Symbols = newSymbolsWithChangedSymbol }, Cmd.none
 
     | ChangeConstant (compId, newVal, newText) -> 
-        let newsymbol = changeConstant model compId newVal newText
+        let newsymbol = changeConstantf model compId newVal newText
         let symbolswithoutone = model.Symbols.Remove compId
         let newSymbolsWithChangedSymbol = symbolswithoutone.Add (compId, newsymbol)
         { model with Symbols = newSymbolsWithChangedSymbol }, Cmd.none
@@ -1435,19 +1467,60 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
     | ResetModel -> { model with Symbols = Map.empty; Ports = Map.empty }, Cmd.none
     
     | LoadComponents comps ->
+        let findrotatedportmap symbol rotation =
+            let once = rotatePortMap (genAPortOffsets symbol symbol.Compo.Type) symbol
+            let twice = rotatePortMap once symbol
+            let th = rotatePortMap twice symbol
+            match rotation with
+            |R0 ->  genAPortOffsets symbol symbol.Compo.Type
+            |R90 -> once
+            |R180 -> twice
+            |R270 -> th
+
+        let totalsides sidesString =
+            let countmap = List.countBy id sidesString |> Map.ofList
+            let counts = [Map.tryFind "R" countmap; Map.tryFind "B" countmap; Map.tryFind "L" countmap; Map.tryFind "T" countmap]
+            let t = counts |> List.map (fun x ->
+                match x with 
+                |Some a -> a
+                |None -> 0
+                )
+            // t
+            (t[0],t[1],t[2],t[3])
+
+        let reconstructCustomPortMap lst map w h =
+            let keys = map |> Map.toList |> List.map fst
+            let sides = List.map (fun (side,index)->side) lst
+            let sidesString = 
+                sides |> List.map (fun x ->
+                    match x with
+                    |0 -> "R"
+                    |1 -> "B"
+                    |2 -> "L"
+                    |3 -> "T"
+                    |_ -> "R"
+                    ) 
+            
+            let r,b,l,t = totalsides sidesString
+            // let w,h = symbol.Compo.W, symbol.Compo.H //it needs the new height and width here based on spec above
+
+            let valuesNew = List.map (fun (side,index) -> {Side=(orientationDecoder side);Offset=(customOffsetHelper w h (orientationDecoder side) index r l b t);SideIndex= index}) lst
+
+            (keys, valuesNew) ||> List.map2 (fun x y -> (x,y)) |> Map.ofList
+
         let compIdsWithSymbols =
             comps
             |> List.map ( fun comp -> (
                                         let xyPos = {X = float comp.X; Y = float comp.Y}
-                                        let h,w =
+                                        let (h,w) =
                                             if comp.H = -1 && comp.W = -1 then
-                                                let comp' = createComponent xyPos comp.Type comp.Id comp.Label
+                                                let comp' = createComponent xyPos comp.Type comp.Id comp.Label R0
                                                 comp'.H,comp'.W
                                             else
                                                 comp.H, comp.W
                                         ComponentId comp.Id,
                                         let s = { Pos = xyPos;
-                                           STransform = R0;
+                                           STransform = comp.R;
                                            ShowInputPorts = false ;//do not show input ports initially
                                            ShowOutputPorts = false ;//do not show output ports initially
                                            Colour = "lightgrey"     ;// initial color 
@@ -1459,7 +1532,9 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
                                            InWidth1 = None;
                                            APortOffsetsMap = (Map.empty<string,PortOrientationOffset>)
                                          }
-                                        {s with APortOffsetsMap = (genAPortOffsets s s.Compo.Type)}    //to check //need TODO for rotation as well
+                                        match comp.Type with 
+                                        |Custom _ -> {s with APortOffsetsMap = reconstructCustomPortMap comp.SI (findrotatedportmap s R0) comp.W comp.H}  
+                                        |_ -> {s with APortOffsetsMap = (findrotatedportmap s s.STransform)}  
                                         ))
         let symbolList =
             compIdsWithSymbols
@@ -1497,9 +1572,9 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
         let comp = symbol.Compo       
         let newCompType =
             match comp.Type with
-            | RAM1 _ | AsyncRAM1 _ -> memory
-            | ROM1 _ -> memory
-            | AsyncROM1 _ -> memory
+            | RAM1 mem | AsyncRAM1 mem -> memory
+            | ROM1 mem -> memory
+            | AsyncROM1 mem -> memory
             | _ -> 
                 printfn $"Warning: improper use of WriteMemoryType on {comp} ignored"
                 comp.Type
@@ -1521,6 +1596,3 @@ let extractComponents (symModel: Model) : Component list =
     symModel.Symbols
     |> Map.toList
     |> List.map (fun (key, _) -> extractComponent symModel key)
-//---------------------------------------------------------------------------------//
-//--------------------GV319 CODE SECTION 2 ENDS-------------------------------------//
-//---------------------------------------------------------------------------------//
