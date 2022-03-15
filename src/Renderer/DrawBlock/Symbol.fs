@@ -436,19 +436,19 @@ let genAPortOffsets (symbol: Symbol) (cType: ComponentType) : Map<string,PortOri
 /// Rotates port posistion (given the symbol rotation) by updating the APortOffsetsMap
 let rotatePortMap (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
     
-    // let rotatePortMapMux (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
-    //     match symbol.STransform with
-    //     |R0 -> Map.ofList [ ("I0", {Side=Top;Offset={X=(float(symbol.Compo.H)*2.0/3.0);Y=(0.0)}});("I1", {Side=Top;Offset={X=(float(symbol.Compo.H)/3.0);Y=(0.0)}});("I2", {Side=Left;Offset={X=float(symbol.Compo.H)*0.1;Y=float(symbol.Compo.W)/2.0}});("O0", {Side=Bottom;Offset={X=float(symbol.Compo.H)/2.0;Y=float(symbol.Compo.W)}})]
-    //     |R90 -> Map.ofList [ ("I0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=(float(symbol.Compo.H)*2.0/3.0)}});("I1", {Side=Right;Offset={X=float(symbol.Compo.W);Y=(float(symbol.Compo.H)/3.0)}});("I2", {Side=Top;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.1}});("O0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)/2.0}})]
-    //     |R180 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=(float(symbol.Compo.H)/3.0);Y=float(symbol.Compo.W)}});("I1", {Side=Bottom;Offset={X=(float(symbol.Compo.H)*2.0/3.0);Y=float(symbol.Compo.W)}});("I2", {Side=Right;Offset={X=float(symbol.Compo.H)*0.9;Y=float(symbol.Compo.W)/2.0}});("O0", {Side=Top;Offset={X=float(symbol.Compo.H)/2.0;Y=0.0}})]
-    //     |R270 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=(float(symbol.Compo.H)/3.0)}});("I1", {Side=Left;Offset={X=0.0;Y=(float(symbol.Compo.H)*2.0/3.0)}});("I2", {Side=Bottom;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.9}});("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/2.0}})]
+    let rotatePortMapMux (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
+        match symbol.STransform with
+        |R0 -> Map.ofList [ ("I0", {Side=Top;Offset={X=(float(symbol.Compo.H)*2.0/3.0);Y=(0.0)};SideIndex= -1});("I1", {Side=Top;Offset={X=(float(symbol.Compo.H)/3.0);Y=(0.0)};SideIndex= -1});("I2", {Side=Left;Offset={X=float(symbol.Compo.H)*0.1;Y=float(symbol.Compo.W)/2.0};SideIndex= -1});("O0", {Side=Bottom;Offset={X=float(symbol.Compo.H)/2.0;Y=float(symbol.Compo.W)};SideIndex= -1})]
+        |R90 -> Map.ofList [ ("I0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=(float(symbol.Compo.H)*2.0/3.0)};SideIndex= -1});("I1", {Side=Right;Offset={X=float(symbol.Compo.W);Y=(float(symbol.Compo.H)/3.0)};SideIndex= -1});("I2", {Side=Top;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.1};SideIndex= -1});("O0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)/2.0};SideIndex= -1})]
+        |R180 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=(float(symbol.Compo.H)/3.0);Y=float(symbol.Compo.W)};SideIndex= -1});("I1", {Side=Bottom;Offset={X=(float(symbol.Compo.H)*2.0/3.0);Y=float(symbol.Compo.W)};SideIndex= -1});("I2", {Side=Right;Offset={X=float(symbol.Compo.H)*0.9;Y=float(symbol.Compo.W)/2.0};SideIndex= -1});("O0", {Side=Top;Offset={X=float(symbol.Compo.H)/2.0;Y=0.0};SideIndex= -1})]
+        |R270 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=(float(symbol.Compo.H)/3.0)};SideIndex= -1});("I1", {Side=Left;Offset={X=0.0;Y=(float(symbol.Compo.H)*2.0/3.0)};SideIndex= -1});("I2", {Side=Bottom;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.9};SideIndex= -1});("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/2.0};SideIndex= -1})]
 
-    // let rotatePortMapAdder (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
-    //     match symbol.STransform with
-    //         |R0 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.W)/3.0}});("I1", {Side=Top;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=0.0}}); ("I2", {Side=Top;Offset={X=float(symbol.Compo.H)/3.0;Y=0.0}}); ("O0", {Side=Bottom;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=float(symbol.Compo.W)}});("O1", {Side=Right;Offset={X=(symbol.Compo.H);Y=float(symbol.Compo.W)-30.0}})]
-    //         |R90 -> Map.ofList [ ("I0", {Side=Top;Offset={X=float(symbol.Compo.W)*2.0/3.0;Y=0.0}});("I1", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)*2.0/3.0}}); ("I2", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0}}); ("O0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)*2.0/3.0}});("O1", {Side=Bottom;Offset={X=30.0;Y=float(symbol.Compo.H)}})]
-    //         |R180 -> Map.ofList  [ ("I0", {Side=Right;Offset={X=float(symbol.Compo.H);Y=float(symbol.Compo.W)*2.0/3.0}});("I1", {Side=Bottom;Offset={X=float(symbol.Compo.H)/3.0;Y=float(symbol.Compo.W)}}); ("I2", {Side=Bottom;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=float(symbol.Compo.W)}}); ("O0", {Side=Top;Offset={X=float(symbol.Compo.H)/3.0;Y=0.0}});("O1", {Side=Left;Offset={X=0.0;Y=30.0}})]
-    //         |R270 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=float(symbol.Compo.W)/3.0;Y=float(symbol.Compo.H)}});("I1", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)/3.0}}); ("I2", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)*2.0/3.0}}); ("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0}});("O1", {Side=Top;Offset={X=float(symbol.Compo.W)-30.0;Y=0.0}})]
+    let rotatePortMapAdder (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
+        match symbol.STransform with
+            |R0 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.W)/3.0};SideIndex= -1});("I1", {Side=Top;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=0.0};SideIndex= -1}); ("I2", {Side=Top;Offset={X=float(symbol.Compo.H)/3.0;Y=0.0};SideIndex= -1}); ("O0", {Side=Bottom;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=float(symbol.Compo.W)};SideIndex= -1});("O1", {Side=Right;Offset={X=(symbol.Compo.H);Y=float(symbol.Compo.W)-30.0};SideIndex= -1})]
+            |R90 -> Map.ofList [ ("I0", {Side=Top;Offset={X=float(symbol.Compo.W)*2.0/3.0;Y=0.0};SideIndex= -1});("I1", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)*2.0/3.0};SideIndex= -1}); ("I2", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0};SideIndex= -1}); ("O0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)*2.0/3.0};SideIndex= -1});("O1", {Side=Bottom;Offset={X=30.0;Y=float(symbol.Compo.H)};SideIndex= -1})]
+            |R180 -> Map.ofList  [ ("I0", {Side=Right;Offset={X=float(symbol.Compo.H);Y=float(symbol.Compo.W)*2.0/3.0};SideIndex= -1});("I1", {Side=Bottom;Offset={X=float(symbol.Compo.H)/3.0;Y=float(symbol.Compo.W)};SideIndex= -1}); ("I2", {Side=Bottom;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=float(symbol.Compo.W)};SideIndex= -1}); ("O0", {Side=Top;Offset={X=float(symbol.Compo.H)/3.0;Y=0.0};SideIndex= -1});("O1", {Side=Left;Offset={X=0.0;Y=30.0};SideIndex= -1})]
+            |R270 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=float(symbol.Compo.W)/3.0;Y=float(symbol.Compo.H)};SideIndex= -1});("I1", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)/3.0};SideIndex= -1}); ("I2", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)*2.0/3.0};SideIndex= -1}); ("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0};SideIndex= -1});("O1", {Side=Top;Offset={X=float(symbol.Compo.W)-30.0;Y=0.0};SideIndex= -1})]
 
     let rotatePortMap' (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
         map |> Map.map (fun key port ->
@@ -460,9 +460,9 @@ let rotatePortMap (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
         ) //MUX + ADDER requires special treatment
     
     match symbol.Compo.Type with
-    // |Mux2 -> rotatePortMapMux map symbol
-    // |NbitsAdder _ -> rotatePortMapAdder map symbol
-    |MergeWires |SplitWire _ |Mux2 |NbitsAdder _ |Custom _ -> map
+    |Mux2 -> rotatePortMapMux map symbol
+    |NbitsAdder _ -> rotatePortMapAdder map symbol
+    |MergeWires |SplitWire _ |Custom _ -> map
     |_ -> rotatePortMap' map symbol 
 
 
