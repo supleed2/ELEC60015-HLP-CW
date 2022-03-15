@@ -1532,9 +1532,9 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
                                            InWidth1 = None;
                                            APortOffsetsMap = (Map.empty<string,PortOrientationOffset>)
                                          }
-                                        match comp.Type with 
-                                        |Custom _ -> {s with APortOffsetsMap = reconstructCustomPortMap comp.SI (findrotatedportmap s R0) comp.W comp.H}  
-                                        |_ -> {s with APortOffsetsMap = (findrotatedportmap s s.STransform)}  
+                                        match comp.SI with 
+                                        |[] -> {s with APortOffsetsMap = (findrotatedportmap s s.STransform)}   //SI is empty for all other components except custom + when custom has not been altered
+                                        |_ -> {s with APortOffsetsMap = reconstructCustomPortMap comp.SI (findrotatedportmap s R0) comp.W comp.H}   //if custom has been altered, reconstruct based on SI member of component 
                                         ))
         let symbolList =
             compIdsWithSymbols
