@@ -317,7 +317,7 @@ let pp segs (model: Model)=
     |> String.concat ";"
 
 let ppRISeg riseg=
-    printfn $"Index:{riseg.Index},Dir:{riseg.Dir},Length:{riseg.Length}"
+    printfn $"Index:{riseg.Index},Dir:{riseg.Dir},Length:{riseg.Length},Draggable:{riseg.Draggable}"
     riseg
 
 //-------------------------------Implementation code----------------------------//
@@ -382,7 +382,7 @@ let initialWireVerticesFromPorts (startPort:XYPos) (endPort:XYPos) (routetype:ro
                 {X = endX; Y = endY}
             ], false // not left to right
     |Rightangle -> 
-        if (endX-startX >= Wire.stickLength) && (endY-startY>=Wire.stickLength) then
+        if (abs(endX-startX) >= Wire.stickLength) && (abs(endY-startY)>=Wire.stickLength) then
             [ 
                 {X = startX; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
@@ -490,13 +490,12 @@ let convertVerticesToASegs connId (isLeftToRight: bool) routetype rotation (yref
                     | _ -> true
             | Sameside-> 
                 match index with
-                    | 2 -> true
-                    | 3 | 4 -> not isLeftToRight 
-                    | _ -> false
+                    | 0 | 6 -> false
+                    | _ -> true
             | Rightangle->
                 match index with
-                    | 3 | 4 ->  not isLeftToRight 
-                    | _ -> false
+                    | 0 | 6 -> false
+                    | _ -> true
 
     let flipdir=
         function | Horizontal -> Vertical
