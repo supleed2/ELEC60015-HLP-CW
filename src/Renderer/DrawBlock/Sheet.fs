@@ -83,7 +83,7 @@ type SnapIndicator =
 
 /// For Keyboard messages
 type KeyboardMsg =
-    | CtrlS | CtrlC | CtrlV | CtrlZ | CtrlY | CtrlA | CtrlW | AltC | AltV | AltZ | AltShiftZ | ZoomIn | ZoomOut | DEL | ESC
+    | CtrlS | CtrlC | CtrlV | CtrlZ | CtrlY | CtrlA | CtrlW | AltC | AltV | AltZ | AltShiftZ | ZoomIn | ZoomOut | DEL | ESC | Rotate | FlipV | FlipH
 
 type Msg =
     | Wire of BusWire.Msg
@@ -168,6 +168,10 @@ type Model = {
     /// Change the label of Component specified by compId to lbl
     member this.ChangeLabel (dispatch: Dispatch<Msg>) (compId: ComponentId) (lbl: string) =
         dispatch <| (Wire (BusWire.Symbol (Symbol.ChangeLabel (compId, lbl) ) ) )
+        
+    /// Change the Port Side of Component specified by compId to lbl
+    member this.ChangePort (dispatch: Dispatch<Msg>) (compId: ComponentId) (portName: string) (portSide: string) =
+        dispatch <| (Wire (BusWire.Symbol (Symbol.ChangePort (compId, portName,portSide) ) ) )    
         
     /// Run Bus Width Inference check
     member this.DoBusWidthInference dispatch =
@@ -422,8 +426,9 @@ let findNearbyPorts (model: Model) =
 /// Returns what is located at pos
 /// Priority Order: InputPort -> OutputPort -> Component -> Wire -> Canvas
 let mouseOn (model: Model) (pos: XYPos) : MouseOn =
-    let inputPorts, outputPorts = findNearbyPorts model
-
+    let inputPortsWithSide, outputPortsWithSide = findNearbyPorts model
+    let inputPorts = List.map(fun (outPort,(orient,location)) -> outPort,location) inputPortsWithSide
+    let outputPorts = List.map(fun (outPort,(orient,location)) -> outPort,location) outputPortsWithSide
     //TODO FIX THIS - QUICK FIX TO MAKE WORK, NOT IDEAL
     //The ports/wires are being loaded in the correct place but the detection is not working 
     //Something is wrong with the mouse coordinates somewhere, might be caused by zoom? not sure
@@ -681,8 +686,9 @@ let mDragUpdate (model: Model) (mMsg: MouseT) : Model * Cmd<Msg> =
         moveSymbols model mMsg
     | ConnectingInput _ -> 
         let nearbyComponents = findNearbyComponents model mMsg.Pos
-        let _, nearbyOutputPorts = findNearbyPorts model
-
+        let _, nearbyOutputPortsWithSide = findNearbyPorts model
+        let nearbyOutputPorts = List.map(fun (outPort,(orient,location)) -> outPort,location)nearbyOutputPortsWithSide
+        
         let targetPort, drawLineTarget = 
             match mouseOnPort nearbyOutputPorts mMsg.Pos 12.5 with
             | Some (OutputPortId portId, portLoc) -> (portId, portLoc) // If found target, snap target of the line to the port
@@ -697,8 +703,8 @@ let mDragUpdate (model: Model) (mMsg: MouseT) : Model * Cmd<Msg> =
         , Cmd.ofMsg CheckAutomaticScrolling
     | ConnectingOutput _ -> 
         let nearbyComponents = findNearbyComponents model mMsg.Pos
-        let nearbyInputPorts, _ = findNearbyPorts model
-        
+        let nearbyInputPortsWithSide, _ = findNearbyPorts model
+        let nearbyInputPorts = List.map(fun (outPort,(orient,location)) -> outPort,location) nearbyInputPortsWithSide
         let targetPort, drawLineTarget = 
             match mouseOnPort nearbyInputPorts mMsg.Pos 12.5 with
             | Some (InputPortId portId, portLoc) -> (portId, portLoc) // If found target, snap target of the line to the port
@@ -851,6 +857,21 @@ let update (msg : Msg) (model : Model): Model*Cmd<Msg> =
         Cmd.batch [
             symbolCmd (Symbol.CopySymbols model.SelectedComponents) // Better to have Symbol keep track of clipboard as symbols can get deleted before pasting.
             wireCmd (BusWire.CopyWires model.SelectedWires)
+        ]
+    | KeyPress Rotate ->
+        model,
+        Cmd.batch [
+            symbolCmd (Symbol.RotateSymbols model.SelectedComponents) // Rotate Symbol using keyboard combination
+        ]
+    | KeyPress FlipV ->
+        model,
+        Cmd.batch [
+            symbolCmd (Symbol.FlipVSymbols model.SelectedComponents) // Flip Vertically Symbol using keyboard combination
+        ]
+    | KeyPress FlipH ->
+        model,
+        Cmd.batch [
+            symbolCmd (Symbol.FlipHSymbols model.SelectedComponents) // Flip Vertically Symbol using keyboard combination
         ]
     | KeyPress CtrlV ->
         let newSymbolModel, pastedCompIds = Symbol.pasteSymbols model.Wire.Symbol model.LastMousePos // Symbol has Copied Symbols stored

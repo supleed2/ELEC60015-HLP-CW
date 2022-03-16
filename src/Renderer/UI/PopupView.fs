@@ -90,7 +90,10 @@ let setComponentLabel model (sheetDispatch) (comp:Component) (text:string) =
 
     model.Sheet.ChangeLabel sheetDispatch (ComponentId comp.Id) label
     //model.Diagram.EditComponentLabel comp.Id label
+let setComponentPortUpdate model sheetDispatch (comp:Component) (portName:string) (portSide:string) =
 
+    model.Sheet.ChangePort sheetDispatch (ComponentId comp.Id) portName portSide
+    //model.Diagram.EditComponentLabel comp.Id label
 
 
 //========//

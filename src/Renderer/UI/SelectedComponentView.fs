@@ -6,6 +6,7 @@
 
 module SelectedComponentView
 
+open EEExtensions
 open Fulma
 open Fable.React
 open Fable.React.Props
@@ -16,6 +17,7 @@ open CommonTypes
 open MemoryEditorView
 open PopupView
 open Notifications
+
 
 let private readOnlyFormField name body =
     Field.div [] [
@@ -383,34 +385,90 @@ let private makeExtraInfo model (comp:Component) text dispatch =
     | _ -> div [] []
 
 
-let viewSelectedComponent (model: ModelType.Model) dispatch =
+let viewSelectedComponent (model: ModelType.Model) dispatch : ReactElement =
+    
+    
     let sheetDispatch sMsg = dispatch (Sheet sMsg)
     let formatLabelText (txt: string) =
         txt.ToUpper()
         |> Seq.filter (function | ch when System.Char.IsLetterOrDigit ch -> true | '.' -> true | '_' -> true | _ -> false)
         |> Seq.skipWhile (System.Char.IsLetter >> not)
         |> (fun chars -> match Seq.length chars with | 0 -> None | _ -> Some (String.concat "" (Seq.map string chars)))
+    
+    
+    
+    
+    
     match model.Sheet.SelectedComponents with
     | [ compId ] ->
-        let comp = Symbol.extractComponent model.Sheet.Wire.Symbol compId
-        div [Key comp.Id] [
+        let comp = Symbol.extractComponent model.Sheet.Wire.Symbol compId // Extract Component : function in Symbol.fs
+        let sym = Symbol.extractSymbol model.Sheet.Wire.Symbol compId     // Extract Symbol : function in Symbol.fs
+        let namesPortRaw = Symbol.portNamesMap comp 
+        
+               
+        div [Style [ Margin 0 ];Key comp.Id] [
             // let label' = extractLabelBase comp.Label
             // TODO: normalise labels so they only contain allowed chars all uppercase
             let label' = Option.defaultValue "L" (formatLabelText comp.Label) // No formatting atm
             readOnlyFormField "Description" <| makeDescription comp model dispatch
             makeExtraInfo model comp label' dispatch
             let required = match comp.Type with | SplitWire _ | MergeWires | BusSelection _ -> false | _ -> true
+            div [Key comp.Id] [
             textFormField required "Component Name" label' (fun text ->
-                // TODO: removed formatLabel for now
-                //setComponentLabel model sheetDispatch comp (formatLabel comp text)
                 match formatLabelText text with
                 | Some label -> 
                     setComponentLabel model sheetDispatch comp label
                     dispatch <| SetPopupDialogText (Some label)
                 | None -> ()
-                //updateNames model (fun _ _ -> model.WaveSim.Ports) |> StartWaveSim |> dispatch
                 dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) // reload the new component
                 )
-        ]    
+            // Control when the namesPortRaw map can be accessed else return normal name of port
+            let allowedDescription = match comp.Type with | NbitsAdder _ | Decode4 | Register _ |DFF| RegisterE _ |DFFE| ROM1 _ |AsyncROM1 _ | RAM1 _ | AsyncRAM1 _ | Mux2 | Demux2  | NbitsXor _ | Custom _ -> true | _ -> false
+            let ports =
+                sym.APortOffsetsMap
+                |> Map.toList
+            let portNameLst =
+                ports
+                |> List.map fst
+                |> List.map (fun key -> if allowedDescription then namesPortRaw[key] else key)
+            let portSideLst = ["Top";"Left";"Bottom";"Right"]
+            
+            //Already done for custom symbols
+          
+//            let portDescription (i:string) : ReactElement =
+//                Label.label [] [ h2 [] [str i ]]
+//                
+//                
+//            Field.div [] [
+//                    Label.label [] [ str "Component Ports" ]
+//                    g [] (Seq.map portDescription portNameLst)
+//                ]
+            let mutable portName = ""
+            let mutable portSide = ""
+            
+            let dropDown (available:bool) (name:string) (lst:string list): ReactElement =
+                if available then
+                    Field.div [] [
+                        Label.label [] [ str name ]
+                        Label.label [ ]
+                            [Select.select []
+                                [ select [(OnChange(fun option ->
+                                    match name with
+                                    | "Port" -> portName <- option.Value; if (portName <> "" && portSide <> "") then setComponentPortUpdate model sheetDispatch comp portName portSide; dispatch <| SetPopupDialogText (Some portName);dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) else printf "Not yet"
+                                    | "Side" -> portSide <- option.Value; if (portName <> "" && portSide <> "") then setComponentPortUpdate model sheetDispatch comp portName portSide; dispatch <| SetPopupDialogText (Some portSide);dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) else printf "Not yet"
+                                    | _ -> failwithf "Case not an option"
+                                    ))]
+                                    
+                                    ([option [Value "";Selected true;Disabled true] [str ("Choose " + string name)]] @ List.map(fun value -> option [Value value] [str value]) lst)
+                                    ]
+                                ]
+                    ]
+                else
+                    Field.div [] []
+            dropDown allowedDescription "Port" portNameLst
+            dropDown allowedDescription "Side" portSideLst
+            
+            ]
+        ]
     | _ -> div [] [ str "Select a component in the diagram to view or change its properties, for example number of bits." ]
 
