@@ -171,7 +171,8 @@ type Model = {
         
     /// Change the Port Side of Component specified by compId to lbl
     member this.ChangePort (dispatch: Dispatch<Msg>) (compId: ComponentId) (portName: string) (portSide: string) =
-        dispatch <| (Wire (BusWire.Symbol (Symbol.ChangePort (compId, portName,portSide) ) ) )    
+        dispatch <| (Wire (BusWire.Symbol (Symbol.ChangePort (compId, portName,portSide) ) ) )
+        dispatch <| (Wire (BusWire.UpdateWires ([compId], {X = 0.0; Y = 0.0})))
         
     /// Run Bus Width Inference check
     member this.DoBusWidthInference dispatch =
@@ -862,6 +863,7 @@ let update (msg : Msg) (model : Model): Model*Cmd<Msg> =
         model,
         Cmd.batch [
             symbolCmd (Symbol.RotateSymbols model.SelectedComponents) // Rotate Symbol using keyboard combination
+            wireCmd (BusWire.UpdateWires (model.SelectedComponents, {X = 0.0; Y = 0.0}))
         ]
     | KeyPress FlipV ->
         model,

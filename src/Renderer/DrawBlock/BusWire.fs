@@ -404,8 +404,8 @@ let initialWireVerticesFromPorts (startPort:XYPos) (endPort:XYPos) (routetype:ro
                 {X = endX; Y = endY-Wire.stickLength};
                 {X = endX; Y = endY}
             ], false
-    |Sameside -> 
-        if endX-startX >= Wire.stickLength*2.0 && endY >= startY then
+    | Sameside -> 
+        if abs (endX-startX) >= Wire.stickLength*2.0 && endY >= startY then
             [ 
                 {X = startX; Y = startY};
                 {X = startX ; Y = startY- Wire.stickLength};
@@ -416,7 +416,7 @@ let initialWireVerticesFromPorts (startPort:XYPos) (endPort:XYPos) (routetype:ro
                 {X = endX ; Y = endY-Wire.stickLength}
                 {X = endX; Y = endY}
             ], true 
-        elif endX-startX >= Wire.stickLength*2.0 then
+        elif abs (endX-startX) >= Wire.stickLength*2.0 then
             [ 
                 {X = startX; Y = startY};
                 {X = startX ; Y = startY- Wire.stickLength};
@@ -715,7 +715,7 @@ let makeInitialASegList (hostId: ConnectionId)
     xyPairs |> convertVerticesToASegs hostId isLeftToRight routetype rotation yreflect outputPortPos
 
 // TODO: native RISeg implementation
-/// Initial list of rotation invariant segments based on positions of ports to be connected
+// Initial list of rotation invariant segments based on positions of ports to be connected
 // let makeInitialRISegList (hostId: ConnectionId) (portCoords: XYPos * XYPos) : RISeg list =
 //     makeInitialASegList hostId portCoords
 //     |> List.map aSegToRISeg

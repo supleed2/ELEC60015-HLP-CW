@@ -114,13 +114,18 @@ let posAdd (a:XYPos) (b:XYPos) =
 let posOf x y = {X=x;Y=y}
 
 //STransform Finite State Machine
-let stransform_fsm(prev_state:Rotation):Rotation =
-    match prev_state with
-    | R0 -> R90
-    | R90 -> R180
-    | R180 -> R270
-    | R270 -> R0
 
+
+let stransform_fsm (prev_state:Rotation) (comp: ComponentType) : Rotation = 
+    let stransformUpdate(prev_state:Rotation):Rotation =
+        match prev_state with
+        | R0 -> R90
+        | R90 -> R180
+        | R180 -> R270
+        | R270 -> R0
+    match comp with 
+    |Custom _ |MergeWires |SplitWire _ -> prev_state
+    |_ -> stransformUpdate prev_state
 
 let orientationEncoder (orientation:PortOrientation) : int = 
     match orientation with
@@ -683,7 +688,7 @@ let DrawPorts (portMap: Map<string,PortOrientationOffset>) o (showInput:bool) (s
             match key,port with
             |k,{Side=side;Offset={X=x;Y=y}} -> if (k[0] = 'I' && showInput) || (k[0]='O' && showOutput) then makeCircle x y portCircle else nothing 
         )
-        mid |> Map.values |> List.ofSeq
+        mid |> Map.toList |> List.map snd
 
 ///Draw the corresponding text of all ports contained in APortOffsetMap
 let DrawPortsText (portMap:Map<string,PortOrientationOffset>) (comp: Component) symbol orientation = 
@@ -698,7 +703,7 @@ let DrawPortsText (portMap:Map<string,PortOrientationOffset>) (comp: Component) 
             |Bottom -> (addText (port.Offset.X) (port.Offset.Y-20.0)  name "Middle" "normal" "12px")[0]  //they are added in a list at the end
             |Left-> (addText (port.Offset.X+5.0) (port.Offset.Y-7.0) name "start" "normal" "12px")[0]  
             |Top -> (addText (port.Offset.X) (port.Offset.Y+7.0)  name "Middle" "normal" "12px")[0]        )
-        mid |> Map.values |> List.ofSeq
+        mid |> Map.toList |> List.map snd
 
 
 let private createPolygon points colour opacity = 
@@ -805,8 +810,8 @@ let drawSymbol (symbol:Symbol) (comp:Component) (colour:string) (showInputPorts:
         | Input _ -> rotatePoints [0.0; 0.0; (w*0.66); 0.0; w; h/2.0; (w*0.66); h; 0.0; h] rotation
         | Constant1 _ -> rotatePoints [0.0; 0.0; (w/2.0); (h/2.0); 0.0; h] rotation
         | IOLabel -> rotatePoints [(w*0.33); 0.0; (w*0.66); 0.0; w; (h/2.0); (w*0.66); h; (w*0.33); h; 0.0; (h/2.0)] rotation
-        | Output _ -> rotatePoints [0.0; 0.0; (w*0.66); 0.0; w; (h/2.0); (w*0.66); h; 0.0; h] (stransform_fsm(stransform_fsm(rotation))) //hack for rotation to work -> same as input but rotated twice
-        | Viewer _ -> rotatePoints [0.0; 0.0; (w*0.8); 0.0; w; (h/2.0); (w*0.8); h; 0.0; h] (stransform_fsm(stransform_fsm(rotation))) //hack for rotation to work -> same as input (resized) but rotated twice
+        | Output _ -> rotatePoints [0.0; 0.0; (w*0.66); 0.0; w; (h/2.0); (w*0.66); h; 0.0; h] (stransform_fsm(stransform_fsm rotation comp.Type) comp.Type) //hack for rotation to work -> same as input but rotated twice
+        | Viewer _ -> rotatePoints [0.0; 0.0; (w*0.8); 0.0; w; (h/2.0); (w*0.8); h; 0.0; h] (stransform_fsm(stransform_fsm rotation comp.Type) comp.Type) //hack for rotation to work -> same as input (resized) but rotated twice
         | MergeWires -> [(w/2.0); ((1.0/6.0)*h); (w/2.0); ((5.0/6.0)*h)]  //add it to rotatePoints function when implemented
         | SplitWire _ -> [(w/2.0); ((1.0/6.0)*h); (w/2.0); ((5.0/6.0)*h); 0.0] //add it to rotatePoints function when implemented
         | Demux2 -> rotatePoints [0.0; (h*0.2); w; 0.0; w; h; 0.0; (h*0.8)] rotation
@@ -814,6 +819,7 @@ let drawSymbol (symbol:Symbol) (comp:Component) (colour:string) (showInputPorts:
         // EXTENSION: |Mux4|Mux8 ->(sprintf "%i,%i %i,%f  %i,%f %i,%i" 0 0 w (float(h)*0.2) w (float(h)*0.8) 0 h )
         // EXTENSION: | Demux4 |Demux8 -> (sprintf "%i,%f %i,%f %i,%i %i,%i" 0 (float(h)*0.2) 0 (float(h)*0.8) w h w 0)
         | BusSelection _ |BusCompare _ -> rotatePoints [0.0; 0.0; (0.6*w); 0.0; (0.8*w); (0.3*h); w; (0.3*h); w; (0.7*h); (0.8*w); (0.7*h); (0.6*w); h; 0.0; h] rotation
+        | Custom _ -> [0.0; 0.0; w; 0.0; w; h; 0.0; h]
         | _ -> rotatePoints [0.0; 0.0; w; 0.0; w; h; 0.0; h] rotation
     
     // Helper function to add certain characteristics on specific symbols (inverter, enables, clocks)
@@ -1372,23 +1378,39 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
             List.fold (fun prevSymbols sId ->
                 let compo = model.Symbols[sId].Compo
                 // let hR,wR = match stransform_fsm(model.Symbols[sId].STransform) with |R90|R270 -> compo.W,compo.H |_ -> compo.H,compo.W 
-                let newcompo = {compo with R = stransform_fsm (model.Symbols[sId].STransform);}
-                Map.add sId {model.Symbols[sId] with Compo = newcompo ; STransform = stransform_fsm(model.Symbols[sId].STransform); APortOffsetsMap = rotatePortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
+                let newcompo = {compo with R = stransform_fsm model.Symbols[sId].STransform compo.Type ;}
+                Map.add sId {model.Symbols[sId] with Compo = newcompo ; STransform = stransform_fsm model.Symbols[sId].STransform compo.Type ; APortOffsetsMap = rotatePortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
         { model with Symbols = newSymbols }, Cmd.none
+    //////////////PENDING///////////////////
+    
+    // | FlipHSymbols compList -> // NEW: flip a symbol Horizontally
+    //     let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
+    //     let newSymbols =
+    //         // The selected symbol is rotated by incrementing Stransform rotation and updating new APortOffsetsMap and Symbol Pos 
+    //         List.fold (fun prevSymbols sId ->
+    //             Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(stransform_fsm model.Symbols[sId].STransform); APortOffsetsMap = flipHPortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
+    //     { model with Symbols = newSymbols }, Cmd.none
+    
+    // | FlipVSymbols compList ->
+    //     let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
+    //     let newSymbols =
+    //         // The selected symbol is rotated by incrementing Stransform rotation and updating new APortOffsetsMap and Symbol Pos 
+    //         List.fold (fun prevSymbols sId ->
+    //             Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(stransform_fsm(model.Symbols[sId].STransform)); APortOffsetsMap = flipVPortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
+    //     { model with Symbols = newSymbols }, Cmd.none
+
     | FlipHSymbols compList -> // NEW: flip a symbol Horizontally
         let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
         let newSymbols =
-            // The selected symbol is rotated by incrementing Stransform rotation and updating new APortOffsetsMap and Symbol Pos 
             List.fold (fun prevSymbols sId ->
-                Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(stransform_fsm(model.Symbols[sId].STransform)); APortOffsetsMap = flipHPortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
+                Map.add sId model.Symbols[sId] prevSymbols) resetSymbols compList  //NEED TO DO APPROPRIATE CHANGES HERE, SEE ROTATION FOR INSPIRATION
         { model with Symbols = newSymbols }, Cmd.none
     
     | FlipVSymbols compList ->
         let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
         let newSymbols =
-            // The selected symbol is rotated by incrementing Stransform rotation and updating new APortOffsetsMap and Symbol Pos 
             List.fold (fun prevSymbols sId ->
-                Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(stransform_fsm(model.Symbols[sId].STransform)); APortOffsetsMap = flipVPortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
+                Map.add sId model.Symbols[sId] prevSymbols) resetSymbols compList  //NEED TO DO APPROPRIATE CHANGES HERE, SEE ROTATION FOR INSPIRATION
         { model with Symbols = newSymbols }, Cmd.none
 
     | ErrorSymbols (errorCompList,selectCompList,isDragAndDrop) -> 
