@@ -375,10 +375,10 @@ let isAllVisible (model: Model)(conns: ConnectionId list) (comps: ComponentId li
         |> List.fold (&&) true
     wVisible && cVisible
 
+//---------------------------------------------------------------------------------//
+//--------------------GV319 CODE SECTION 2 STARTS-------------------------------------//
+//---------------------------------------------------------------------------------//  
     
-    
-
-
 /// Calculates if two bounding boxes intersect by comparing corner coordinates of each box
 let boxesIntersect (box1: BoundingBox) (box2: BoundingBox) =
     // Requires min and max since H & W can be negative, i.e. we don't know which corner is which automatically
@@ -794,7 +794,7 @@ let mMoveUpdate (model: Model) (mMsg: MouseT) : Model * Cmd<Msg> =
     | DragAndDrop -> moveSymbols model mMsg
     | InitialisedCreateComponent (compType, lbl) ->
         let labelTest = if lbl = "" then Symbol.generateLabel model.Wire.Symbol compType else lbl
-        let newSymbolModel, newCompId = Symbol.addSymbol model.Wire.Symbol mMsg.Pos compType labelTest
+        let newSymbolModel, newCompId = Symbol.addSymbol model.Wire.Symbol mMsg.Pos compType labelTest R0
 
         { model with Wire = { model.Wire with Symbol = newSymbolModel }
                      Action = DragAndDrop

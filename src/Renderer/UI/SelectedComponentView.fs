@@ -423,7 +423,7 @@ let viewSelectedComponent (model: ModelType.Model) dispatch : ReactElement =
                 dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) // reload the new component
                 )
             // Control when the namesPortRaw map can be accessed else return normal name of port
-            let allowedDescription = match comp.Type with | NbitsAdder _ | Decode4 | Register _ |DFF| RegisterE _ |DFFE| ROM1 _ |AsyncROM1 _ | RAM1 _ | AsyncRAM1 _ | Mux2 | Demux2  | NbitsXor _ | Custom _ -> true | _ -> false
+            let allowedDescription = match comp.Type with | Custom _ -> true | _ -> false
             let ports =
                 sym.APortOffsetsMap
                 |> Map.toList
@@ -446,29 +446,40 @@ let viewSelectedComponent (model: ModelType.Model) dispatch : ReactElement =
             let mutable portName = ""
             let mutable portSide = ""
             
-            let dropDown (available:bool) (name:string) (lst:string list): ReactElement =
-                if available then
-                    Field.div [] [
-                        Label.label [] [ str name ]
-                        Label.label [ ]
-                            [Select.select []
-                                [ select [(OnChange(fun option ->
-                                    match name with
-                                    | "Port" -> portName <- option.Value; if (portName <> "" && portSide <> "") then setComponentPortUpdate model sheetDispatch comp portName portSide; dispatch <| SetPopupDialogText (Some portName);dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) else printf "Not yet"
-                                    | "Side" -> portSide <- option.Value; if (portName <> "" && portSide <> "") then setComponentPortUpdate model sheetDispatch comp portName portSide; dispatch <| SetPopupDialogText (Some portSide);dispatch (ReloadSelectedComponent model.LastUsedDialogWidth) else printf "Not yet"
-                                    | _ -> failwithf "Case not an option"
-                                    ))]
-                                    
-                                    ([option [Value "";Selected true;Disabled true] [str ("Choose " + string name)]] @ List.map(fun value -> option [Value value] [str value]) lst)
-                                    ]
+            if allowedDescription then
+                Field.div [] [
+                    Label.label [] [ str "Port Movements" ]
+                    p [  Style [ FontStyle "italic"; FontSize "12px"; LineHeight "1.1"]] [
+                    str <| $"To change the location of the ports on the symbol:\n 1. Select the port to change its location.
+                             2. Select the side of the Symbol on where the Port should be.\n 3. Press the Submit button to submit your changes.\n"]
+                             
+                    Label.label [] [ str "Port Selection" ]
+                    Label.label [ ]
+                        [Select.select []
+                            [ select [(OnChange(fun option ->
+                                portName <- option.Value;(printf "%A\n" option.Value)))]
+                                
+                                ([option [Value "";Selected true;Disabled true] [str ("Choose Port")]] @ List.map(fun value -> option [Value value] [str value]) portNameLst)
                                 ]
+                            ]
+                    Label.label [] [ str "Side Selection" ]
+                    Label.label [ ]
+                        [Select.select []
+                            [ select [(OnChange(fun option ->
+                                portSide <- option.Value; (printf "%A\n" option.Value)))]
+                                
+                                ([option [Value "";Selected true;Disabled true] [str ("Choose Side")]] @ List.map(fun value -> option [Value value] [str value]) portSideLst)
+                                ]
+                            ]
+                    Button.button [
+                        Button.Color IsPrimary
+                        Button.Props [ OnClick (fun _ -> (if (portName <> "" && portSide <> "") then setComponentPortUpdate model sheetDispatch comp portName portSide; dispatch <| SetPopupDialogText (Some (portName+" "+portSide));dispatch (ReloadSelectedComponent model.LastUsedDialogWidth)))]
                     ]
-                else
-                    Field.div [] []
-            dropDown allowedDescription "Port" portNameLst
-            dropDown allowedDescription "Side" portSideLst
-            
-            ]
+                        [ str "Submit" ]
+                ]
+            else
+                Field.div [] []
+        ]
         ]
     | _ -> div [] [ str "Select a component in the diagram to view or change its properties, for example number of bits." ]
 
