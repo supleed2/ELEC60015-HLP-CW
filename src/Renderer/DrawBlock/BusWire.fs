@@ -334,21 +334,38 @@ let RISegsToVertices (segList: RISeg list) =
     |> List.scan getRISegEnd segList[0].Start
     |> List.map (fun pos -> pos.X, pos.Y)
 
-/// Get initial list of wire vertices given port locations corresponding to the enpoints of a wire
-let initialWireVerticesFromPorts (startPort:XYPos) (endPort:XYPos) (routetype:routeType)  = 
-    let startX, startY, endX, endY = startPort.X, startPort.Y, endPort.X, endPort.Y
+/// Get initial list of wire vertices given port locations corresponding to the
+/// enpoints of a wire
+let initialWireVerticesFromPorts 
+        (startPort: XYPos) 
+        (endPort: XYPos) 
+        (routetype: routeType): (list<XYPos> * bool)  = 
 
-    match routetype with 
-    | Oppositeside ->
-        // adjust length of segments 0 and 6 - the sticks - so that when two ports are aligned and close you still get left-to-right routing.
+    let startX, startY, endX, endY = 
+        startPort.X, startPort.Y, endPort.X, endPort.Y
+
+    // Oppositeside -> the two ports face one another
+    if routetype = Oppositeside then
+        
+        // Adjust length of segments 0 and 6 - the sticks - so that when two 
+        // ports are aligned and close, you still get left-to-right routing
         let stickLength =
             if (endX - startX > 0.0) then
-                let d = List.max [ abs (startX - endX) ; abs (startY - endY) ; Wire.stickLength / 4.0 ]
-                min d (Wire.stickLength / 2.0)
+                [ 
+                    abs (startX - endX)
+                    abs (startY - endY)
+                    Wire.stickLength / 4.0 
+                ]
+                |> List.max
+                |> min (Wire.stickLength / 2.0)
             else
                 Wire.stickLength / 2.0
+        
+        // Wire travelling left to right (positive X) from output port to input 
+        // port
+        // S - + - + - + - E
         if endX - startX >= stickLength * 2.0 then
-            [ // Wire travelling left to right (positive X) from output port to input port
+            [ 
                 {X = startX; Y = startY}
                 {X = startX + stickLength; Y = startY};
                 {X = startX + stickLength; Y = startY} ;
@@ -357,87 +374,165 @@ let initialWireVerticesFromPorts (startPort:XYPos) (endPort:XYPos) (routetype:ro
                 {X = endX - stickLength; Y = endY}
                 {X = endX - stickLength; Y = endY}
                 {X = endX; Y = endY}
-            ], true // left to right
+            ], 
+            true // left to right
+
+        // Wire travelling right to left (negative X), but ports are (almost) 
+        // aligned vertically An offset is added to the main horizontal segment 
+        // so it can be seen / dragged more easily
+        // 
+        // E - + - +   + - + - S
+        //         |   |
+        //         + - +
         elif abs (startY - endY) < 4.0 then
-            [ // Wire travelling right to left (negative X), but ports are (almost) aligned vertically
-            // An offset is added to the main horizontal segment so it can be seen / dragged more easily
+            [ 
                 {X = startX; Y = startY}
-                {X = startX+Wire.stickLength; Y = startY}
-                {X = startX+Wire.stickLength; Y = startY}
-                {X = startX+Wire.stickLength; Y = startY + Wire.stickLength}
-                {X = endX-Wire.stickLength; Y = startY + Wire.stickLength}
-                {X = endX-Wire.stickLength; Y = endY}
-                {X = endX-Wire.stickLength; Y = endY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY + Wire.stickLength}
+                {X = endX - Wire.stickLength; Y = startY + Wire.stickLength}
+                {X = endX - Wire.stickLength; Y = endY}
+                {X = endX - Wire.stickLength; Y = endY}
                 {X = endX; Y = endY}
-            ], false // not left to right
+            ], 
+            false // not left to right
+        
+        // Wire travelling right to left (negative X), bending back on itself
+        // 
+        //         + - + - S
+        //         |
+        // E - + - +
         else
-            [ // Wire travelling right to left (negative X), bending back on itself
+            [ 
                 {X = startX; Y = startY}
-                {X = startX+Wire.stickLength; Y = startY}
-                {X = startX+Wire.stickLength; Y = startY}
-                {X = startX+Wire.stickLength; Y = (startY+endY)/2.0}
-                {X = endX-Wire.stickLength; Y = (startY+endY)/2.0}
-                {X = endX-Wire.stickLength; Y = endY}
-                {X = endX-Wire.stickLength; Y = endY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = (startY + endY) / 2.0}
+                {X = endX - Wire.stickLength; Y = (startY + endY) / 2.0}
+                {X = endX - Wire.stickLength; Y = endY}
+                {X = endX - Wire.stickLength; Y = endY}
                 {X = endX; Y = endY}
-            ], false // not left to right
-    |Rightangle -> 
-        if (abs(endX-startX) >= Wire.stickLength) && (abs(endY-startY)>=Wire.stickLength) then
+            ], 
+            false // not left to right
+    
+    // Rightangle -> there's a 90 degree angle between the two ports
+    elif routetype = Rightangle then 
+
+        // If the angle is a longer than the stick length, add a kink to the 
+        // wire which will space it out more evenly
+        // 
+        // S - + - +
+        //         |
+        //         +
+        //         |
+        //         E
+        if (endX - startX >= Wire.stickLength) 
+                && (endY - startY >= Wire.stickLength) then
+            
             [ 
                 {X = startX; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
                 {X = endX; Y = startY};
                 {X = endX; Y = startY};
-                {X = endX ; Y = endY-Wire.stickLength}
-                {X = endX ; Y = endY-Wire.stickLength}
+                {X = endX ; Y = endY - Wire.stickLength}
+                {X = endX ; Y = endY - Wire.stickLength}
                 {X = endX; Y = endY}
-            ], true 
+            ], 
+            true // Left-to-right 
+        
+        // Otherwise, if either X or Y delta is smaller than the stick length,
+        // add some creative meandering
+        // 
+        // + ---- +
+        // |      |
+        // |      + - S
+        // + - +
+        //     |
+        //     E
         else
             [ 
                 {X = startX; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
                 {X = (startX + endX) / 2.0; Y = startY};
-                {X = (startX + endX) / 2.0; Y = endY-Wire.stickLength};
-                {X = endX; Y = endY-Wire.stickLength};
-                {X = endX; Y = endY-Wire.stickLength};
+                {X = (startX + endX) / 2.0; Y = endY - Wire.stickLength};
+                {X = endX; Y = endY - Wire.stickLength};
+                {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY}
-            ], false
-    | Sameside -> 
-        if abs (endX-startX) >= Wire.stickLength*2.0 && endY >= startY then
+            ], 
+            false // Not left-to-right
+    
+    // Sameside -> the two ports are facing in the same direction
+    elif routetype = Sameside then
+
+        // If the X distance is more than twice the sticklength, and 
+        // the output port is *above* the input port
+        //
+        //     E      E
+        //     |      |
+        // S   +  or  +   S
+        // |   |      |   |
+        // + - +      + - +
+        if abs (endX - startX) >= Wire.stickLength * 2.0 
+                && endY >= startY then
+            
             [ 
                 {X = startX; Y = startY};
-                {X = startX ; Y = startY- Wire.stickLength};
-                {X = startX ; Y = startY- Wire.stickLength};
-                {X = endX; Y = startY- Wire.stickLength};
-                {X = endX; Y = startY- Wire.stickLength};
-                {X = endX ; Y = endY-Wire.stickLength}
-                {X = endX ; Y = endY-Wire.stickLength}
+                {X = startX ; Y = startY - Wire.stickLength};
+                {X = startX ; Y = startY - Wire.stickLength};
+                {X = endX; Y = startY - Wire.stickLength};
+                {X = endX; Y = startY - Wire.stickLength};
+                {X = endX ; Y = endY - Wire.stickLength}
+                {X = endX ; Y = endY - Wire.stickLength}
                 {X = endX; Y = endY}
-            ], true 
-        elif abs (endX-startX) >= Wire.stickLength*2.0 then
+            ], 
+            true // Left-to-right
+        
+        // Otherwise if the start port is above the end port:
+        //
+        //     S      S
+        //     |      |
+        // E   +  or  +   E
+        // |   |      |   |
+        // + - +      + - +
+        elif abs (endX - startX) >= Wire.stickLength * 2.0 then
             [ 
                 {X = startX; Y = startY};
-                {X = startX ; Y = startY- Wire.stickLength};
-                {X = startX ; Y = endY- Wire.stickLength};
-                {X = endX; Y = endY- Wire.stickLength};
-                {X = endX; Y = endY- Wire.stickLength};
-                {X = endX ; Y = endY-Wire.stickLength}
-                {X = endX ; Y = endY-Wire.stickLength}
+                {X = startX ; Y = startY - Wire.stickLength};
+                {X = startX ; Y = endY - Wire.stickLength};
+                {X = endX; Y = endY - Wire.stickLength};
+                {X = endX; Y = endY - Wire.stickLength};
+                {X = endX ; Y = endY - Wire.stickLength}
+                {X = endX ; Y = endY - Wire.stickLength}
                 {X = endX; Y = endY}
-            ], true 
+            ], 
+            true // Left-to-right
+        
+        // And last but not least, if the X distance is less than two stick
+        // lengths' worth:
+        // 
+        // S                      E
+        // |                      |
+        // + - +   E  or  S   + - +
+        //     |   |      |   |  
+        //     + - +      + - +
         else
             [ 
                 {X = startX; Y = startY};
-                {X = startX ; Y = startY-Wire.stickLength};
-                {X = startX ; Y = startY-Wire.stickLength};
-                {X = startX + Wire.stickLength*2.0 ; Y = startY-Wire.stickLength};
-                {X = startX + Wire.stickLength*2.0 ; Y = endY-Wire.stickLength};
-                {X = endX; Y = endY-Wire.stickLength};
-                {X = endX; Y = endY-Wire.stickLength};
+                {X = startX ; Y = startY - Wire.stickLength};
+                {X = startX ; Y = startY - Wire.stickLength};
+                {X = startX + Wire.stickLength * 2.0 ; Y = startY - Wire.stickLength};
+                {X = startX + Wire.stickLength * 2.0 ; Y = endY - Wire.stickLength};
+                {X = endX; Y = endY - Wire.stickLength};
+                {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY}
-            ], false
+            ], 
+            false // Not left-to-right
+    
+    else
+        failwith "route type not recognized"
+
 
 /// Infer whether wire is LeftToRight from vertices
 let inferOrientationFromVertices (xyVerticesList: XYPos list) : bool option =
@@ -667,11 +762,22 @@ let makeASegPos (seg : ASeg) =
 let makeRISegPos (seg: RISeg) =
     { seg with Start = absXYPos seg.Start }
 
-/// Initial list of absolute segments based on positions of ports to be connected
+/// Initial list of absolute segments based on positions of ports to be 
+/// connected.
+/// Does some cool stuff to allow for routing between ports of rotated 
+/// components using reflection/rotation of 3 basic patterns
 let makeInitialASegList (hostId: ConnectionId) 
-        (inputPort: Symbol.PortOrientation * XYPos) (outputPort: Symbol.PortOrientation * XYPos) : list<ASeg> =
-    let inputPortPos, (inputPortOri:Symbol.PortOrientation), outputPortPos,(outputPortOri:Symbol.PortOrientation)  = snd inputPort, fst inputPort, snd outputPort, fst outputPort
+        (inputPort: Symbol.PortOrientation * XYPos) 
+        (outputPort: Symbol.PortOrientation * XYPos)
+        : list<ASeg> =
+    
+    // Get (input, output) port positions and orientations
+    let inputPortPos, outputPortPos = snd inputPort, snd outputPort
+    let (inputPortOri: Symbol.PortOrientation), 
+            (outputPortOri: Symbol.PortOrientation) = 
+        fst inputPort, fst outputPort
 
+    // Lil' cheeky functor to flip positions about the x axis
     let reverse_rotate =
         function
         | PosY -> PosY
@@ -679,39 +785,64 @@ let makeInitialASegList (hostId: ConnectionId)
         | NegY -> NegY
         | NegX -> PosX
 
+    // There's 3 types of route conditions:
+    // - SameSide
+    // - RightAngle
+    // - OppositeSide
+    // 
+    // Based on the direction of the port coming out of the input (and into the
+    // output), we pick a shape of route, a rotation direction, and whether or 
+    // not the wire requires reflection.
+    let routetype, rotation, yreflect =
+        match outputPortOri, inputPortOri with 
+            | Symbol.Top, Symbol.Top -> Sameside, PosY, false
+            | Symbol.Top, Symbol.Right -> Rightangle, NegX, true
+            | Symbol.Top, Symbol.Bottom -> Oppositeside, NegX, false
+            | Symbol.Top, Symbol.Left -> Rightangle, NegX, false
+            
+            | Symbol.Right, Symbol.Top -> Rightangle, PosY, false
+            | Symbol.Right, Symbol.Right -> Sameside, PosX, false
+            | Symbol.Right, Symbol.Bottom -> Rightangle,NegY, true
+            | Symbol.Right, Symbol.Left -> Oppositeside, PosY, false
 
-    let routetype,rotation,yreflect =
-        match outputPortOri,inputPortOri  with 
-        | Symbol.Top, Symbol.Top -> Sameside, PosY, false
-        | Symbol.Top , Symbol.Right -> Rightangle, NegX, true
-        | Symbol.Top , Symbol.Bottom -> Oppositeside, NegX, false
-        | Symbol.Top , Symbol.Left -> Rightangle, NegX, false
-        | Symbol.Right , Symbol.Top -> Rightangle, PosY, false
-        | Symbol.Right , Symbol.Right -> Sameside, PosX, false
-        | Symbol.Right , Symbol.Bottom -> Rightangle,NegY, true
-        | Symbol.Right , Symbol.Left -> Oppositeside, PosY, false
-        | Symbol.Bottom , Symbol.Top ->  Oppositeside, PosX, false
-        | Symbol.Bottom , Symbol.Right -> Rightangle, PosX, false
-        | Symbol.Bottom , Symbol.Bottom -> Sameside, NegY, false
-        | Symbol.Bottom , Symbol.Left -> Rightangle, PosX, true
-        | Symbol.Left , Symbol.Top -> Rightangle, PosY, true
-        | Symbol.Left , Symbol.Right -> Oppositeside, NegY, false
-        | Symbol.Left , Symbol.Bottom -> Rightangle, NegY, false
-        | Symbol.Left , Symbol.Left -> Sameside, NegX, false
+            | Symbol.Bottom, Symbol.Top ->  Oppositeside, PosX, false
+            | Symbol.Bottom, Symbol.Right -> Rightangle, PosX, false
+            | Symbol.Bottom, Symbol.Bottom -> Sameside, NegY, false
+            | Symbol.Bottom, Symbol.Left -> Rightangle, PosX, true
 
-    let inputPortPos' = 
-        let relativePos=
-            inputPortPos-outputPortPos
+            | Symbol.Left, Symbol.Top -> Rightangle, PosY, true
+            | Symbol.Left, Symbol.Right -> Oppositeside, NegY, false
+            | Symbol.Left, Symbol.Bottom -> Rightangle, NegY, false
+            | Symbol.Left, Symbol.Left -> Sameside, NegX, false
+
+    // Get the adjusted input port position, applying any rotations and
+    // reflections
+    let inputPortPos': XYPos = 
+        let relativePos =
+            inputPortPos - outputPortPos
             |> rotate_rel (reverse_rotate rotation)
             |> yReflect yreflect
         
         relativePos + outputPortPos
 
-    printfn $"outputPortPos:{outputPortPos},inputPortPos':{inputPortPos'},inputPortPos:{inputPortPos}"
-    printfn $"inputPortOri:{inputPortOri},outputPortOri:{outputPortOri}"
-    printfn $"routetype:{routetype},rotation:{rotation},yreflect:{yreflect}"
-    let xyPairs, isLeftToRight = initialWireVerticesFromPorts outputPortPos inputPortPos' routetype
-    xyPairs |> convertVerticesToASegs hostId isLeftToRight routetype rotation yreflect outputPortPos
+    (*
+    printfn $"outputPortPos:{outputPortPos}, inputPortPos':{inputPortPos'}, inputPortPos:{inputPortPos}"
+    printfn $"inputPortOri:{inputPortOri}, outputPortOri:{outputPortOri}"
+    printfn $"routetype:{routetype}, rotation:{rotation}, yreflect:{yreflect}"
+    *)
+
+    let (xyPairs: list<XYPos>), (isLeftToRight: bool) = 
+        initialWireVerticesFromPorts outputPortPos inputPortPos' routetype
+    
+    // Does a thing
+    convertVerticesToASegs 
+        hostId 
+        isLeftToRight 
+        routetype 
+        rotation 
+        yreflect 
+        outputPortPos 
+        xyPairs
 
 // TODO: native RISeg implementation
 // Initial list of rotation invariant segments based on positions of ports to be connected
@@ -1872,30 +2003,52 @@ let update (msg : Msg) (model : Model) : Model * Cmd<Msg> =
              |> Map.filter (fun id _ -> not (List.contains id connectionIds))
         {model with WX = newWX}, Cmd.ofMsg BusWidths
 
+    // Handles wire dragging request
     | DragWire (connId : ConnectionId, mMsg: MouseT) ->
         match mMsg.Op with
+
+        // On a mouse press, select that given segment
         | Down ->
             let segId = getClickedSegment model connId mMsg.Pos
             {model with SelectedSegment = segId }, Cmd.none
+        
+        // On a mouse drag, move the segment the mouse is hovering over
         | Drag ->
-            let aSeg =
-                let aSegOption =
+
+            // Get the segment
+            let aSeg: ASeg =
+
+                // Picks the segment being selected from a list of all the 
+                // wire's segments
+                let aSegOption: option<ASeg> =
+            
+                    let choiceFunctor (segment: ASeg): option<ASeg> =
+                        if segment.Id = model.SelectedSegment then Some segment
+                        else None 
+                    
                     riSegWireToASegs model.WX[connId]
-                    |> List.choose ( fun aSeg -> if aSeg.Id = model.SelectedSegment then Some aSeg else None )
+                    |> List.choose choiceFunctor
                     |> List.tryExactlyOne
+                
+                // Make sure a segment was found
                 match aSegOption with
                 | Some aSeg -> aSeg
-                | None -> failwithf "Error: Segment Id not found in segment list"
+                | None -> failwithf "Error: Segment Id not found in list"
 
+            // Check the segment is draggable; otherwise, do nothing
             if aSeg.Draggable then
+
+                // Evaluate the drag distance (perpendicular to the segment's
+                // direction) to the mouse position
                 let distanceToMove = 
                     match aSeg.Dir with
                     | Horizontal -> mMsg.Pos.Y - abs aSeg.Start.Y
                     | Vertical -> mMsg.Pos.X - abs aSeg.Start.X
 
+                // Create a new wire segment by dragging the current one, and 
+                // insert it into the model
                 let newWire = moveSegment aSeg distanceToMove model
                 let newWX = Map.add aSeg.HostId newWire model.WX
- 
                 {model with WX = newWX}, Cmd.none
             else
                 model, Cmd.none
