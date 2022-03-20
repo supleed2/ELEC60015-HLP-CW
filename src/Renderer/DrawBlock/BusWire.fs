@@ -2026,7 +2026,7 @@ let update (msg : Msg) (model : Model) : Model * Cmd<Msg> =
                         if segment.Id = model.SelectedSegment then Some segment
                         else None 
                     
-                    riSegWireToASegs model.WX[connId]
+                    model.WX[connId].Segments
                     |> List.choose choiceFunctor
                     |> List.tryExactlyOne
                 
