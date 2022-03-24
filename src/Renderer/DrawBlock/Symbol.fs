@@ -1381,37 +1381,19 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
                 let newcompo = {compo with R = stransform_fsm model.Symbols[sId].STransform compo.Type ;}
                 Map.add sId {model.Symbols[sId] with Compo = newcompo ; STransform = stransform_fsm model.Symbols[sId].STransform compo.Type ; APortOffsetsMap = rotatePortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
         { model with Symbols = newSymbols }, Cmd.none
-    //////////////PENDING///////////////////
-    
-    // | FlipHSymbols compList -> // NEW: flip a symbol Horizontally
-    //     let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
-    //     let newSymbols =
-    //         // The selected symbol is rotated by incrementing Stransform rotation and updating new APortOffsetsMap and Symbol Pos 
-    //         List.fold (fun prevSymbols sId ->
-    //             Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(stransform_fsm model.Symbols[sId].STransform); APortOffsetsMap = flipHPortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
-    //     { model with Symbols = newSymbols }, Cmd.none
-    
-    // | FlipVSymbols compList ->
-    //     let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
-    //     let newSymbols =
-    //         // The selected symbol is rotated by incrementing Stransform rotation and updating new APortOffsetsMap and Symbol Pos 
-    //         List.fold (fun prevSymbols sId ->
-    //             Map.add sId {model.Symbols[sId] with STransform = stransform_fsm(stransform_fsm(model.Symbols[sId].STransform)); APortOffsetsMap = flipVPortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
-    //     { model with Symbols = newSymbols }, Cmd.none
-
-    | FlipHSymbols compList -> // NEW: flip a symbol Horizontally
-        let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
-        let newSymbols =
-            List.fold (fun prevSymbols sId ->
-                Map.add sId model.Symbols[sId] prevSymbols) resetSymbols compList  //NEED TO DO APPROPRIATE CHANGES HERE, SEE ROTATION FOR INSPIRATION
-        { model with Symbols = newSymbols }, Cmd.none
-    
-    | FlipVSymbols compList ->
-        let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
-        let newSymbols =
-            List.fold (fun prevSymbols sId ->
-                Map.add sId model.Symbols[sId] prevSymbols) resetSymbols compList  //NEED TO DO APPROPRIATE CHANGES HERE, SEE ROTATION FOR INSPIRATION
-        { model with Symbols = newSymbols }, Cmd.none
+//    | FlipHSymbols compList -> // NEW: flip a symbol Horizontally
+//        let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
+//        let newSymbols =
+//            List.fold (fun prevSymbols sId ->
+//                Map.add sId model.Symbols[sId] prevSymbols) resetSymbols compList  //NEED TO DO APPROPRIATE CHANGES HERE, SEE ROTATION FOR INSPIRATION
+//        { model with Symbols = newSymbols }, Cmd.none
+//    
+//    | FlipVSymbols compList ->
+//        let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
+//        let newSymbols =
+//            List.fold (fun prevSymbols sId ->
+//                Map.add sId model.Symbols[sId] prevSymbols) resetSymbols compList  //NEED TO DO APPROPRIATE CHANGES HERE, SEE ROTATION FOR INSPIRATION
+//        { model with Symbols = newSymbols }, Cmd.none
 
     | ErrorSymbols (errorCompList,selectCompList,isDragAndDrop) -> 
         let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols

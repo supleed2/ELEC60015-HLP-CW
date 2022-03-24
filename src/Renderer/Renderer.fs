@@ -149,8 +149,8 @@ let viewMenu dispatch =
         makeItem "Diagram Zoom to Fit" (Some "CmdOrCtrl+W") (fun ev -> dispatch Sheet.KeyboardMsg.CtrlW)
         menuSeparator
         makeItem "Rotate Symbol" (Some "Shift+R") (fun ev -> dispatch Sheet.KeyboardMsg.Rotate)
-        makeItem "Flip Horizontally Symbol" (Some "Shift+H") (fun ev -> dispatch Sheet.KeyboardMsg.FlipH)
-        makeItem "Flip Vertically Symbol" (Some "Shift+V") (fun ev -> dispatch Sheet.KeyboardMsg.FlipV)
+//        makeItem "Flip Horizontally Symbol" (Some "Shift+H") (fun ev -> dispatch Sheet.KeyboardMsg.FlipH)
+//        makeItem "Flip Vertically Symbol" (Some "Shift+V") (fun ev -> dispatch Sheet.KeyboardMsg.FlipV)
         menuSeparator
         makeCondItem (JSHelpers.debugLevel <> 0) "Toggle Dev Tools" (Some devToolsKey) (fun _ -> 
             renderer.ipcRenderer.send("toggle-dev-tools", [||]) |> ignore)

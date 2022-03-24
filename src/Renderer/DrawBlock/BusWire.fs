@@ -439,8 +439,21 @@ let initialWireVerticesFromPorts
                 {X = endX ; Y = endY - Wire.stickLength}
                 {X = endX; Y = endY}
             ], 
-            true // Left-to-right 
-        
+            true // Left-to-right
+        //fix issue by wrapping wire input port and not through for 1st quadrant  
+        else if (endX - startX < Wire.stickLength)
+                && (endY - startY >= 2.5 * Wire.stickLength) then
+            [
+                {X = startX; Y = startY};
+                {X = startX + Wire.stickLength; Y = startY};
+                {X = startX + Wire.stickLength; Y = startY + 1.5 * Wire.stickLength};
+                {X = endX; Y = startY + 1.5 * Wire.stickLength};
+                {X = endX; Y = endY - Wire.stickLength};
+                {X = endX; Y = endY - Wire.stickLength};
+                {X = endX; Y = endY - Wire.stickLength};
+                {X = endX; Y = endY}
+            ], 
+            false // not Left-to-right
         // Otherwise, if either X or Y delta is smaller than the stick length,
         // add some creative meandering
         // 
@@ -454,8 +467,8 @@ let initialWireVerticesFromPorts
             [ 
                 {X = startX; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
-                {X = startX + Wire.stickLength; Y = startY};
-                {X = (startX + endX) / 2.0; Y = startY};
+                {X = startX + Wire.stickLength; Y = startY - 1.5 * Wire.stickLength};
+                {X = (startX + endX) / 2.0; Y = startY - 1.5 * Wire.stickLength};
                 {X = (startX + endX) / 2.0; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
@@ -574,7 +587,7 @@ let convertVerticesToASegs connId (isLeftToRight: bool) routetype rotation (yref
             | true -> 
                 [Horizontal;Horizontal;Horizontal;Horizontal;Vertical;Vertical;Vertical]
             | false -> 
-                [Horizontal;Horizontal;Horizontal;Vertical;Horizontal;Horizontal;Vertical]
+                [Horizontal;Vertical;Horizontal;Vertical;Horizontal;Horizontal;Vertical]
 
     let draggable index =
         match routetype with 
@@ -796,11 +809,11 @@ let makeInitialASegList (hostId: ConnectionId)
     let routetype, rotation, yreflect =
         match outputPortOri, inputPortOri with 
             | Symbol.Top, Symbol.Top -> Sameside, PosY, false
-            | Symbol.Top, Symbol.Right -> Rightangle, NegX, true
+            | Symbol.Top, Symbol.Right -> Rightangle, PosX, true
             | Symbol.Top, Symbol.Bottom -> Oppositeside, NegX, false
             | Symbol.Top, Symbol.Left -> Rightangle, NegX, false
             
-            | Symbol.Right, Symbol.Top -> Rightangle, PosY, false
+            | Symbol.Right, Symbol.Top -> Rightangle, PosY, false //TODO: WRONG - stick coming out of output+input wrong direction 
             | Symbol.Right, Symbol.Right -> Sameside, PosX, false
             | Symbol.Right, Symbol.Bottom -> Rightangle,NegY, true
             | Symbol.Right, Symbol.Left -> Oppositeside, PosY, false
@@ -808,11 +821,11 @@ let makeInitialASegList (hostId: ConnectionId)
             | Symbol.Bottom, Symbol.Top ->  Oppositeside, PosX, false
             | Symbol.Bottom, Symbol.Right -> Rightangle, PosX, false
             | Symbol.Bottom, Symbol.Bottom -> Sameside, NegY, false
-            | Symbol.Bottom, Symbol.Left -> Rightangle, PosX, true
+            | Symbol.Bottom, Symbol.Left -> Rightangle, NegX, true
 
             | Symbol.Left, Symbol.Top -> Rightangle, PosY, true
             | Symbol.Left, Symbol.Right -> Oppositeside, NegY, false
-            | Symbol.Left, Symbol.Bottom -> Rightangle, NegY, false
+            | Symbol.Left, Symbol.Bottom -> Rightangle, NegY, false //TODO: WRONG - stick coming out of output+input wrong direction 
             | Symbol.Left, Symbol.Left -> Sameside, NegX, false
 
     // Get the adjusted input port position, applying any rotations and

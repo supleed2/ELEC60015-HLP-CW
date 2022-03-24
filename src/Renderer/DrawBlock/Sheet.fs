@@ -865,16 +865,16 @@ let update (msg : Msg) (model : Model): Model*Cmd<Msg> =
             symbolCmd (Symbol.RotateSymbols model.SelectedComponents) // Rotate Symbol using keyboard combination
             wireCmd (BusWire.UpdateWires (model.SelectedComponents, {X = 0.0; Y = 0.0}))
         ]
-    | KeyPress FlipV ->
-        model,
-        Cmd.batch [
-            symbolCmd (Symbol.FlipVSymbols model.SelectedComponents) // Flip Vertically Symbol using keyboard combination
-        ]
-    | KeyPress FlipH ->
-        model,
-        Cmd.batch [
-            symbolCmd (Symbol.FlipHSymbols model.SelectedComponents) // Flip Vertically Symbol using keyboard combination
-        ]
+//    | KeyPress FlipV ->
+//        model,
+//        Cmd.batch [
+//            symbolCmd (Symbol.FlipVSymbols model.SelectedComponents) // Flip Vertically Symbol using keyboard combination
+//        ]
+//    | KeyPress FlipH ->
+//        model,
+//        Cmd.batch [
+//            symbolCmd (Symbol.FlipHSymbols model.SelectedComponents) // Flip Vertically Symbol using keyboard combination
+//        ]
     | KeyPress CtrlV ->
         let newSymbolModel, pastedCompIds = Symbol.pasteSymbols model.Wire.Symbol model.LastMousePos // Symbol has Copied Symbols stored
         let newBusWireModel, pastedConnIds = BusWire.pasteWires { model.Wire with Symbol = newSymbolModel } pastedCompIds
