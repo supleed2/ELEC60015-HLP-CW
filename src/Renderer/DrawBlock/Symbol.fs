@@ -467,6 +467,10 @@ let flipVPortMap (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
     failwithf "Not implemented Yet"
 ////////////////////////////////////////////////////
 
+
+///////////////////////////// CustomPortMovement HELPERS /////////////////////////////////////
+
+
 /// Helper function to change the side/ordering of ports on custom components
 /// First it inverts the name map to find the key of the port which should change
 /// If the newside submitted matches the current side then the SideIndex fields of the ports on that side are altered accordingly to bring the port in the beggining of the specific side
@@ -1361,7 +1365,7 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
         { model with Symbols = Map.add sId addsym model.Symbols }, Cmd.none
     | ChangePort (sId, portName, portSide) ->
         
-        //extract info required from Map to store to SI field of Component
+        //extract info required from Map to store in SI field of Component
         let extractToSI map =
             let lst = map |> Map.toList
             lst |> List.map (fun x -> 
@@ -1377,7 +1381,7 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
             | "Bottom" -> Bottom
             | "Left"   -> Left
             | "Right"  -> Right
-            | _ -> failwithf "Side not implemented"
+            | _ -> failwithf "Undefined Side"
 
         let symbol' = {targetSymbol with APortOffsetsMap = (changePortSide targetSymbol.APortOffsetsMap portName newSide targetSymbol)}  //change ports' Side and SideIndex fields
         let symbol'' = redefineCustomHW symbol'  //change Height Width based on new sides (total ports on each side)
