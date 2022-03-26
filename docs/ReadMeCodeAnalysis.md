@@ -1,4 +1,27 @@
+# Code Analysis Readme
 
+## BusWire - Section 1
+
+### 1. Add new auto-routing cases (Phillip?)
+
+### 2. Add rotation invariant Segment type
+(along with helper functions for converting between and using the two types interchangeably)
+
+### 3. Refactor segment intersection detection function (could be skipped?)
+(used when calculating jumps as well as when detecting if a click is within range of a segment)
+
+### 4. Rounded corner segment rendering
+- Rounded corners
+  - 2 standalone functions, `renderRISegList` and `renderRISegAndCorner`
+  - Can be easily swapped in place of `List.map renderSegment` within `singleWireView, renderWireSegmentList`
+  - Renders only necessary segments, ignoring 0 length segments, either because they are covered by the rounded corners or are 0 length originally
+  - Does not impact underlying position and click detection
+
+## BusWire - Section 2
+
+## BusWire - Section 3
+
+## Symbol - Section 1
 
 ## Symbol - Section 2
 
