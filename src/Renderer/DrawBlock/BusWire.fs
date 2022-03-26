@@ -343,7 +343,8 @@ let initialWireVerticesFromPorts
 
     let startX, startY, endX, endY = 
         startPort.X, startPort.Y, endPort.X, endPort.Y
-
+    
+    printfn $"startX:{startX},endX:{endX},startY:{startY},endY:{endY}"
     // Oppositeside -> the two ports face one another
     if routetype = Oppositeside then
         
