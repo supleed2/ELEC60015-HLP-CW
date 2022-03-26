@@ -446,8 +446,8 @@ let initialWireVerticesFromPorts
             [
                 {X = startX; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
-                {X = startX + Wire.stickLength; Y = startY + 1.5 * Wire.stickLength};
-                {X = endX; Y = startY + 1.5 * Wire.stickLength};
+                {X = startX + Wire.stickLength; Y = (startY + endY)/2.0};
+                {X = endX; Y = (startY + endY)/2.0};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
