@@ -440,26 +440,24 @@ let initialWireVerticesFromPorts
             ], 
             true // Left-to-right
         //fix issue by wrapping wire input port and not through for 1st quadrant  
-        else if (abs(endX - startX) < 3.0*Wire.stickLength)
-                && (endY - startY < 3.0 * Wire.stickLength) then
-            [
+        else if (((startX + endX) / 2.0)>(startX+Wire.stickLength)) then
+            [ 
                 {X = startX; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
-                {X = endX + Wire.stickLength*4.5; Y = startY};
-                {X = endX + Wire.stickLength*4.5; Y = endY - Wire.stickLength};
-                {X = endX; Y = endY - Wire.stickLength};
-                {X = endX; Y = endY - Wire.stickLength};
-                {X = endX; Y = endY - Wire.stickLength};
+                {X = startX + Wire.stickLength; Y = startY};
+                {X = (startX + endX) / 2.0; Y = startY};
+                {X = (startX + endX) / 2.0; Y = endY-Wire.stickLength};
+                {X = endX; Y = endY-Wire.stickLength};
+                {X = endX; Y = endY-Wire.stickLength};
                 {X = endX; Y = endY}
-            ], 
-            false // not Left-to-right
+            ], false
         else 
             [ 
                 {X = startX; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
+                {X = startX + Wire.stickLength; Y = startY};
                 {X = startX + Wire.stickLength; Y = endY - Wire.stickLength};
-                {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY}
@@ -576,7 +574,7 @@ let convertVerticesToASegs connId (isLeftToRight: bool) routetype rotation (yref
             | true -> 
                 [Horizontal;Horizontal;Horizontal;Horizontal;Vertical;Vertical;Vertical]
             | false -> 
-                [Horizontal;Horizontal;Vertical;Horizontal;Vertical;Horizontal;Vertical]
+                [Horizontal;Vertical;Horizontal;Vertical;Horizontal;Vertical;Vertical]
 
     let draggable index =
         match routetype with 
