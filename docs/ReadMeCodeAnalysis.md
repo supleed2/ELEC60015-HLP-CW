@@ -5,17 +5,48 @@
 ### 1. Add new auto-routing cases (Phillip?)
 
 ### 2. Add rotation invariant Segment type
-(along with helper functions for converting between and using the two types interchangeably)
 
-### 3. Refactor segment intersection detection function (could be skipped?)
-(used when calculating jumps as well as when detecting if a click is within range of a segment)
+#### Changes in files
+
+- __BusWire.fs__
+  - `Type RISeg` (Lines: 47-59)
+  - `riSegEnd` (Lines: 62-68)
+  - `jumpDistToJumpCoord` and `jumpCoordToJumpDist` (Lines: 71-76)
+  - `riSegToASeg` and `aSegToRISeg` (Lines: 79-113)
+
+#### Explanation
+
+New segment type that is similar to the old `Segment` but stores the `Length` of the segment instead of the `End` position. The helper function `riSegEnd` allows for easy replacement of an RISeg where ASeg.End was needed.
+
+The remaining helper functions allow for conversion between an ASeg and RISeg, eg. with `List.map` when some functions have been converted to use RISegs and some have not.
+
+### 3. Refactor segment intersection detection function
+
+#### Changes in files
+
+- __BusWire.fs__
+  - `segmentIntersectsSegment` (Lines: 735-765)
+
+#### Explanation
+
+Function `segmentIntersectsSegment` takes in the start and end `XYPos` of two segments and returns `true` if the segments intersect or `false` otherwise. The points are made positive, incase the sign of the position is being used to store data. The start and end of each segment is used to determine if the segment is Horizontal or Vertical, which is then compared. If both segments have the same orientation, they cannot intersect at a point and `false` is immediately returned. Next, the common coordinate of each segment (Y for a Horizontal segment, X for a Vertical segment) is checked against the other segment. If both common coordinates lie on or between the changing coordinate of the other segment, the segments must intersect, and the function returns `true`.
 
 ### 4. Rounded corner segment rendering
-- Rounded corners
-  - 2 standalone functions, `renderRISegList` and `renderRISegAndCorner`
-  - Can be easily swapped in place of `List.map renderSegment` within `singleWireView, renderWireSegmentList`
-  - Renders only necessary segments, ignoring 0 length segments, either because they are covered by the rounded corners or are 0 length originally
-  - Does not impact underlying position and click detection
+
+#### Changes in files
+
+- __BusWire.fs__
+  - `renderRISegAndCorner` (Lines: 829-885)
+  - `renderRISegList` (Lines: 888-900)
+  - `singleWireView` (Lines: 918) *To use renderRISegList inplace of renderSegment*
+
+#### Explanation
+
+Segments with `Length = 0` are filtered out, as they do not need to be considered when rendering, and would impact the calculation of which corners to round later. Then the remaining segments are reindexed, so that the indexes of segments are consecutive again. Segments are then zipped (`zip3`) as contextual information about the 2 connecting segments are needed when rendering a segment, eg. the `Index` and `Length` of the connecting segments.
+
+__Here, `Seq.zip3` is used instead of `List.zip3` as the former allows for uneven length sequences to be zipped, by truncating the longer sequences, rather than throwing `System.ArgumentException`. This avoids an expensive operation to remove the last element of `riSegs` when `dummyStartRISeg` is prepended.__
+
+The presence of start and end rounded corners is calculated next. If the adjoining segment is too short, or if there is no connecting segment (ie. the current segment is the start / end), there is no rounded corner. If a rounded corner is present, the respective coordinates (start / end) of the segment are adjusted to meet the `svg path` of the rounded corner, and the path is drawn using a Bezier Curve, where the second control point lies on the end coordinate of the path.
 
 ## BusWire - Section 2
 
@@ -26,12 +57,15 @@
 ## Symbol - Section 2
 
 ### 1. Locate port position and orientation, given symbol position and orientation
-#### Changes in files:
-- __Symbol.fs__
-    - `canvasPortLocation` (Lines: 743-748)
-    - `getGlobalPortPos` (Lines: 753-761)
 
-#### Explanation:
+#### Changes in files
+
+- __Symbol.fs__
+  - `canvasPortLocation` (Lines: 743-748)
+  - `getGlobalPortPos` (Lines: 753-761)
+
+#### Explanation
+
 Functions `canvasPortLocation` and `getGlobalPortPos` were created to produce the "Global" Coordinates of the ports
 for each symbol at any given rotation and position. `canvasPortLocation` extracts the `APortOffsetsMap` of the specified
 symbol and returns a list of the global XYPos ports of the symbol by combining the offsets with the top-left corner of the symbol.
@@ -50,18 +84,21 @@ update when the symbol is moved. As a result, a communication between the rotati
 to `buswire.fs` to ensure that the wires are correctly displayed during rotation. This will be done later on in the group work.
 
 ### 2. UI to rotate symbol
-#### Changes in files:
+
+#### Changes in files
+
 - __Symbol.fs__
-    - `RotateSymbols compList` (Lines: 1164-1173)
+  - `RotateSymbols compList` (Lines: 1164-1173)
 
 - __Sheet.fs__
-    - `Type KeyboardMsg Rotate` (Lines: 86)
-    - `Keypress Rotate` (Lines: 859-863)
-
+  - `Type KeyboardMsg Rotate` (Lines: 86)
+  - `Keypress Rotate` (Lines: 859-863)
 
 - __Renderer.fs__
-    - `makeItem "Rotate Symbol` (Lines: 151-152)
-#### Explanation:
+  - `makeItem "Rotate Symbol` (Lines: 151-152)
+
+#### Explanation
+
 The UI was altered to incorporate the use of symbol rotation. Thus was done by first altering the `Renderer.fs`. Line 151 was added
 to add the menu item "Rotate Symbol" in order to be able to rotate any symbol selected. This option was then linked through `Sheet.fs`
 This functionality can be found on the menu bar under "View". Further implementation was added to rotation by adding a keyboard shortcut.
@@ -77,13 +114,16 @@ The above can be fully tested by selecting a symbol on the canvas and pressing e
 The "Global" port coordinates of the selected symbol will also appear in the console if Developer Tools are toggled on.
 
 ### 3. Make symbol bounding box work with rotation
-#### Changes in files:
-- __Symbol.fs__
-    - `getBoundingBoxofSymbol` (Lines: 724-727)
-    - `getBoundingBoxes` (Lines: 728-729)
-    - `getOneBoundingBox` (Lines: 730-731)
 
-#### Explanation:
+#### Changes in files
+
+- __Symbol.fs__
+  - `getBoundingBoxofSymbol` (Lines: 724-727)
+  - `getBoundingBoxes` (Lines: 728-729)
+  - `getOneBoundingBox` (Lines: 730-731)
+
+#### Explanation
+
 The function `getBoundingBoxofSymbol` was updated to correctly alter the bounding box border of each symbol by taking into account
 the current orientation of the symbol. This is done using the STransform passed from the Symbol as input of the function. This is
 used as a match case where the bounding box is altered as `HxW` and `WxH` based on the current orientation of the symbol.
@@ -95,19 +135,19 @@ correctly responds when disrupted.
 
 The Symbol enhancements for section 2 described above are fully working without  producing any errors during build and runtime
 
-
 ### 4. Custom Symbol Port Side Change UI
-#### Changes in files:
+
+#### Changes in files
 
 - __SelectedComponentView.fs__
-    - `viewSelectedComponent` (Lines: 388-486)
+  - `viewSelectedComponent` (Lines: 388-486)
 - __PopupView.fs__
-    - `setComponentPortUpdate` (Lines: 93-96)
+  - `setComponentPortUpdate` (Lines: 93-96)
 - __Sheet.fs__
-    - `member this.ChangePort` (Lines: 173-175)
+  - `member this.ChangePort` (Lines: 173-175)
 - __Symbol.fs__
-    - `ChangePort` (Lines: 94, 1418-1441)
+  - `ChangePort` (Lines: 94, 1418-1441)
 
-#### Explanation:
+#### Explanation
+
 The function `viewSelectedComponent` was changed to include a Division field with a list of the ports available to be changed depending on the current symbol selected and a list of the available sides to be moved. In order to move the symbol the port needed to be changed and side selected the most recently changed port on a specific side would be indexed first (ports whose side selected was the same as before would be moved to 1st index). By pressing the submit button the specific change of side will be made. This call is made through `PopupView.fs` of the `setComponentPortUpdate` function responsible for passing the call to the sheet in order to dispatch this change to `Symbol.fs` and `Buswire.fs`. This dispatches are made by the member `this.ChangePort` accessed from `PopupView.fs` were the `UpdateWires` function is called in order and in `Symbol.fs` the Update function `ChangePort` is selected where the construction of a new symbol whose specified port is moved to the side requested is built and made to replace the previous symbol with the specified id passed from `SelectedComponentView.fs`.
-
