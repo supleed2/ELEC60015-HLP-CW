@@ -87,8 +87,8 @@ type Msg =
     | ShowPorts of ComponentId list
     | SelectSymbols of ComponentId list// Issie interface
     | RotateSymbols of ComponentId list //First Attempt at implementing a way to rotate symbol.
-    | FlipHSymbols of ComponentId list //First Attempt at implementing a way to flip symbol horizontally.
-    | FlipVSymbols of ComponentId list //First Attempt at implementing a way to flip symbol vertically.
+    // | FlipHSymbols of ComponentId list //First Attempt at implementing a way to flip symbol horizontally.
+    // | FlipVSymbols of ComponentId list //First Attempt at implementing a way to flip symbol vertically.
     | SymbolsHaveError of sIds: ComponentId list
     | ChangeLabel of sId : ComponentId * newLabel : string
     | ChangePort of sId : ComponentId * portName: string * portSide:string
@@ -439,36 +439,36 @@ let genAPortOffsets (symbol: Symbol) (cType: ComponentType) : Map<string,PortOri
     |_ -> genAPortOffsets' symbol
  
 /// Rotates port posistion (given the symbol rotation) by updating the APortOffsetsMap
-let rotatePortMap (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
+let rotatePortMap (map:Map<string,PortOrientationOffset>) newRotation (comp:Component) =
     
-    let rotatePortMapMux (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
-        match symbol.STransform with
-        |R0 -> Map.ofList [ ("I0", {Side=Top;Offset={X=(float(symbol.Compo.H)*2.0/3.0);Y=(0.0)};SideIndex= -1});("I1", {Side=Top;Offset={X=(float(symbol.Compo.H)/3.0);Y=(0.0)};SideIndex= -1});("I2", {Side=Left;Offset={X=float(symbol.Compo.H)*0.1;Y=float(symbol.Compo.W)/2.0};SideIndex= -1});("O0", {Side=Bottom;Offset={X=float(symbol.Compo.H)/2.0;Y=float(symbol.Compo.W)};SideIndex= -1})]
-        |R90 -> Map.ofList [ ("I0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=(float(symbol.Compo.H)*2.0/3.0)};SideIndex= -1});("I1", {Side=Right;Offset={X=float(symbol.Compo.W);Y=(float(symbol.Compo.H)/3.0)};SideIndex= -1});("I2", {Side=Top;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.1};SideIndex= -1});("O0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)/2.0};SideIndex= -1})]
-        |R180 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=(float(symbol.Compo.H)/3.0);Y=float(symbol.Compo.W)};SideIndex= -1});("I1", {Side=Bottom;Offset={X=(float(symbol.Compo.H)*2.0/3.0);Y=float(symbol.Compo.W)};SideIndex= -1});("I2", {Side=Right;Offset={X=float(symbol.Compo.H)*0.9;Y=float(symbol.Compo.W)/2.0};SideIndex= -1});("O0", {Side=Top;Offset={X=float(symbol.Compo.H)/2.0;Y=0.0};SideIndex= -1})]
-        |R270 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=(float(symbol.Compo.H)/3.0)};SideIndex= -1});("I1", {Side=Left;Offset={X=0.0;Y=(float(symbol.Compo.H)*2.0/3.0)};SideIndex= -1});("I2", {Side=Bottom;Offset={X=float(symbol.Compo.W)/2.0;Y=float(symbol.Compo.H)*0.9};SideIndex= -1});("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/2.0};SideIndex= -1})]
+    let rotatePortMapMux (map:Map<string,PortOrientationOffset>) newRotation (comp:Component) =
+        match newRotation with
+        |R90 -> Map.ofList [ ("I0", {Side=Top;Offset={X=(float(comp.H)*2.0/3.0);Y=(0.0)};SideIndex= -1});("I1", {Side=Top;Offset={X=(float(comp.H)/3.0);Y=(0.0)};SideIndex= -1});("I2", {Side=Left;Offset={X=float(comp.H)*0.1;Y=float(comp.W)/2.0};SideIndex= -1});("O0", {Side=Bottom;Offset={X=float(comp.H)/2.0;Y=float(comp.W)};SideIndex= -1})]
+        |R180 -> Map.ofList [ ("I0", {Side=Right;Offset={X=float(comp.W);Y=(float(comp.H)*2.0/3.0)};SideIndex= -1});("I1", {Side=Right;Offset={X=float(comp.W);Y=(float(comp.H)/3.0)};SideIndex= -1});("I2", {Side=Top;Offset={X=float(comp.W)/2.0;Y=float(comp.H)*0.1};SideIndex= -1});("O0", {Side=Left;Offset={X=0.0;Y=float(comp.H)/2.0};SideIndex= -1})]
+        |R270 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=(float(comp.H)/3.0);Y=float(comp.W)};SideIndex= -1});("I1", {Side=Bottom;Offset={X=(float(comp.H)*2.0/3.0);Y=float(comp.W)};SideIndex= -1});("I2", {Side=Right;Offset={X=float(comp.H)*0.9;Y=float(comp.W)/2.0};SideIndex= -1});("O0", {Side=Top;Offset={X=float(comp.H)/2.0;Y=0.0};SideIndex= -1})]
+        |R0 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=(float(comp.H)/3.0)};SideIndex= -1});("I1", {Side=Left;Offset={X=0.0;Y=(float(comp.H)*2.0/3.0)};SideIndex= -1});("I2", {Side=Bottom;Offset={X=float(comp.W)/2.0;Y=float(comp.H)*0.9};SideIndex= -1});("O0", {Side=Right;Offset={X=float(comp.W);Y=float(comp.H)/2.0};SideIndex= -1})]
 
-    let rotatePortMapAdder (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
-        match symbol.STransform with
-            |R0 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.W)/3.0};SideIndex= -1});("I1", {Side=Top;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=0.0};SideIndex= -1}); ("I2", {Side=Top;Offset={X=float(symbol.Compo.H)/3.0;Y=0.0};SideIndex= -1}); ("O0", {Side=Bottom;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=float(symbol.Compo.W)};SideIndex= -1});("O1", {Side=Right;Offset={X=(symbol.Compo.H);Y=float(symbol.Compo.W)-30.0};SideIndex= -1})]
-            |R90 -> Map.ofList [ ("I0", {Side=Top;Offset={X=float(symbol.Compo.W)*2.0/3.0;Y=0.0};SideIndex= -1});("I1", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)*2.0/3.0};SideIndex= -1}); ("I2", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0};SideIndex= -1}); ("O0", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)*2.0/3.0};SideIndex= -1});("O1", {Side=Bottom;Offset={X=30.0;Y=float(symbol.Compo.H)};SideIndex= -1})]
-            |R180 -> Map.ofList  [ ("I0", {Side=Right;Offset={X=float(symbol.Compo.H);Y=float(symbol.Compo.W)*2.0/3.0};SideIndex= -1});("I1", {Side=Bottom;Offset={X=float(symbol.Compo.H)/3.0;Y=float(symbol.Compo.W)};SideIndex= -1}); ("I2", {Side=Bottom;Offset={X=float(symbol.Compo.H)*2.0/3.0;Y=float(symbol.Compo.W)};SideIndex= -1}); ("O0", {Side=Top;Offset={X=float(symbol.Compo.H)/3.0;Y=0.0};SideIndex= -1});("O1", {Side=Left;Offset={X=0.0;Y=30.0};SideIndex= -1})]
-            |R270 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=float(symbol.Compo.W)/3.0;Y=float(symbol.Compo.H)};SideIndex= -1});("I1", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)/3.0};SideIndex= -1}); ("I2", {Side=Left;Offset={X=0.0;Y=float(symbol.Compo.H)*2.0/3.0};SideIndex= -1}); ("O0", {Side=Right;Offset={X=float(symbol.Compo.W);Y=float(symbol.Compo.H)/3.0};SideIndex= -1});("O1", {Side=Top;Offset={X=float(symbol.Compo.W)-30.0;Y=0.0};SideIndex= -1})]
+    let rotatePortMapAdder (map:Map<string,PortOrientationOffset>) newRotation (comp:Component) =
+        match newRotation with
+        |R90 -> Map.ofList [ ("I0", {Side=Left;Offset={X=0.0;Y=float(comp.W)/3.0};SideIndex= -1});("I1", {Side=Top;Offset={X=float(comp.H)*2.0/3.0;Y=0.0};SideIndex= -1}); ("I2", {Side=Top;Offset={X=float(comp.H)/3.0;Y=0.0};SideIndex= -1}); ("O0", {Side=Bottom;Offset={X=float(comp.H)*2.0/3.0;Y=float(comp.W)};SideIndex= -1});("O1", {Side=Right;Offset={X=(comp.H);Y=float(comp.W)-30.0};SideIndex= -1})]
+        |R180 -> Map.ofList [ ("I0", {Side=Top;Offset={X=float(comp.W)*2.0/3.0;Y=0.0};SideIndex= -1});("I1", {Side=Right;Offset={X=float(comp.W);Y=float(comp.H)*2.0/3.0};SideIndex= -1}); ("I2", {Side=Right;Offset={X=float(comp.W);Y=float(comp.H)/3.0};SideIndex= -1}); ("O0", {Side=Left;Offset={X=0.0;Y=float(comp.H)*2.0/3.0};SideIndex= -1});("O1", {Side=Bottom;Offset={X=30.0;Y=float(comp.H)};SideIndex= -1})]
+        |R270 -> Map.ofList  [ ("I0", {Side=Right;Offset={X=float(comp.H);Y=float(comp.W)*2.0/3.0};SideIndex= -1});("I1", {Side=Bottom;Offset={X=float(comp.H)/3.0;Y=float(comp.W)};SideIndex= -1}); ("I2", {Side=Bottom;Offset={X=float(comp.H)*2.0/3.0;Y=float(comp.W)};SideIndex= -1}); ("O0", {Side=Top;Offset={X=float(comp.H)/3.0;Y=0.0};SideIndex= -1});("O1", {Side=Left;Offset={X=0.0;Y=30.0};SideIndex= -1})]
+        |R0 -> Map.ofList [ ("I0", {Side=Bottom;Offset={X=float(comp.W)/3.0;Y=float(comp.H)};SideIndex= -1});("I1", {Side=Left;Offset={X=0.0;Y=float(comp.H)/3.0};SideIndex= -1}); ("I2", {Side=Left;Offset={X=0.0;Y=float(comp.H)*2.0/3.0};SideIndex= -1}); ("O0", {Side=Right;Offset={X=float(comp.W);Y=float(comp.H)/3.0};SideIndex= -1});("O1", {Side=Top;Offset={X=float(comp.W)-30.0;Y=0.0};SideIndex= -1})]
 
-    let rotatePortMap' (map:Map<string,PortOrientationOffset>) (symbol:Symbol) =
+    let rotatePortMap' (map:Map<string,PortOrientationOffset>) (comp:Component) =
         map |> Map.map (fun key port ->
             match port.Side with
             |Right -> {Side=Bottom;Offset={X=port.Offset.Y;Y=port.Offset.X};SideIndex= -1}
             |Bottom -> {Side=Left;Offset={X=0.0;Y=port.Offset.X};SideIndex= -1}
             |Left -> {Side=Top;Offset={X=port.Offset.Y;Y=port.Offset.X};SideIndex= -1}
-            |Top -> {Side=Right;Offset={X=float(symbol.Compo.W);Y=port.Offset.X};SideIndex= -1}
+            |Top -> {Side=Right;Offset={X=float(comp.W);Y=port.Offset.X};SideIndex= -1}
         ) //MUX + ADDER requires special treatment
     
-    match symbol.Compo.Type with
-    |Mux2 -> rotatePortMapMux map symbol
-    |NbitsAdder _ -> rotatePortMapAdder map symbol
-    |MergeWires |SplitWire _ |Custom _ -> map
-    |_ -> rotatePortMap' map symbol 
+    match comp.Type with
+    |Mux2 -> rotatePortMapMux map newRotation comp
+    |NbitsAdder _ -> rotatePortMapAdder map newRotation comp
+    |MergeWires |SplitWire _ |Custom _ -> map   //non-rotatable symbols
+    |_ -> rotatePortMap' map comp
 
 
 
@@ -1379,7 +1379,8 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
                 let compo = model.Symbols[sId].Compo
                 // let hR,wR = match stransform_fsm(model.Symbols[sId].STransform) with |R90|R270 -> compo.W,compo.H |_ -> compo.H,compo.W 
                 let newcompo = {compo with R = stransform_fsm model.Symbols[sId].STransform compo.Type ;}
-                Map.add sId {model.Symbols[sId] with Compo = newcompo ; STransform = stransform_fsm model.Symbols[sId].STransform compo.Type ; APortOffsetsMap = rotatePortMap model.Symbols[sId].APortOffsetsMap model.Symbols[sId]} prevSymbols) resetSymbols compList
+                let newRotation = stransform_fsm model.Symbols[sId].STransform compo.Type
+                Map.add sId {model.Symbols[sId] with Compo = newcompo ; STransform = newRotation ; APortOffsetsMap = rotatePortMap model.Symbols[sId].APortOffsetsMap newRotation model.Symbols[sId].Compo} prevSymbols) resetSymbols compList
         { model with Symbols = newSymbols }, Cmd.none
 //    | FlipHSymbols compList -> // NEW: flip a symbol Horizontally
 //        let resetSymbols = Map.map (fun _ sym ->  { sym with Colour = "Lightgray"; Opacity = 1.0 }) model.Symbols
@@ -1472,9 +1473,9 @@ let update (msg : Msg) (model : Model): Model*Cmd<'a>  =
     
     | LoadComponents comps ->
         let findrotatedportmap symbol rotation =
-            let once = rotatePortMap (genAPortOffsets symbol symbol.Compo.Type) symbol
-            let twice = rotatePortMap once symbol
-            let th = rotatePortMap twice symbol
+            let once = rotatePortMap (genAPortOffsets symbol symbol.Compo.Type) symbol.STransform symbol.Compo
+            let twice = rotatePortMap once symbol.STransform symbol.Compo
+            let th = rotatePortMap twice symbol.STransform symbol.Compo
             match rotation with
             |R0 ->  genAPortOffsets symbol symbol.Compo.Type
             |R90 -> once
