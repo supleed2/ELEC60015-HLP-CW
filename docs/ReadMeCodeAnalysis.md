@@ -1,9 +1,58 @@
 # Code Analysis Readme
 
-## BusWire - Section 1
+## BusWire 
 
-### 1. Add new auto-routing cases (Phillip?)
+### 1. Add new auto-routing cases 
 
+A new type called *routeType* has been created to pass the information between functions
+
+1. Oppositeside - 3 / 5 Segments Wire (Original Issie implementation)
+
+2. Sameside - 3 / 5 Segments Wire (Ports are at the same side)
+
+3. Rightangle - 2 / 4 Segments Wire (Difference of Port Orientation = 90 degree)
+
+type *Direction* determine the Wire rotation 
+
+`makeInitialASegList`
+
+1. Take the input and output Port position and Orientation from Symbol
+
+2. Match the orientation of the two port to the routeType, the rotation and yreflect applied to the default cases of routing in the spec.
+
+3. Find the location of the input port for the default cases by reversing the rotation and yreflect applied using relative location of input port to the output port
+
+4. Get the Vertices from `initialWireVerticesFromPorts` and convert them to ASegs using `convertVerticesToASegs`
+
+`initialWireVerticesFromPorts`
+
+- Oppositeside contains the same implementation of the original Issie
+
+- Sameside contains 3 conditions
+
+  - Default three segments with endY >= startY
+
+  - Three segments with endY < startY
+
+  - Five segments where the endX is near with the startX
+
+- Rightangle contrains 3 conditions
+
+  - Default two segments that endY>startY and endX>startX
+
+  - Four Segments that the implement equidistance Horizontal Segments where (startX + endX) / 2.0)>(startX+Wire.stickLength)
+
+  - Four Segments that do not implement equidistance Horizontal Segments: it is used for the edge cases from the second condition where the first horizontal segments after the first stick would go into opposite direction of the stick and through the component. Although at a cost that some cases could still implement equidistance segments after the rotation would fall into this case with the restriction of the second condition.
+
+  ![Weird RightAngle Case](/docs/img/Rightangle.png)
+
+`convertVerticesToASegs`
+
+1. Assign the orientation and Dragable and the Direction of the ASeg from the Vertices
+
+2. Convert them to RISeg in order to rotate the segments back to original routing from default cases
+
+3. Calculate the Start for each RISeg and convert back to ASeg
 ### 2. Add rotation invariant Segment type
 
 #### Changes in files
@@ -47,10 +96,6 @@ Segments with `Length = 0` are filtered out, as they do not need to be considere
 __Here, `Seq.zip3` is used instead of `List.zip3` as the former allows for uneven length sequences to be zipped, by truncating the longer sequences, rather than throwing `System.ArgumentException`. This avoids an expensive operation to remove the last element of `riSegs` when `dummyStartRISeg` is prepended.__
 
 The presence of start and end rounded corners is calculated next. If the adjoining segment is too short, or if there is no connecting segment (ie. the current segment is the start / end), there is no rounded corner. If a rounded corner is present, the respective coordinates (start / end) of the segment are adjusted to meet the `svg path` of the rounded corner, and the path is drawn using a Bezier Curve, where the second control point lies on the end coordinate of the path.
-
-## BusWire - Section 2
-
-## BusWire - Section 3
 
 ## Symbol - Section 1
 

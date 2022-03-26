@@ -1,0 +1,1 @@
+yhp19 - Fixing the Rightangle (2-4 Segment) case for the Autorouting algorithms. Equidistance is attempted whenever is possible (more explanation in the code analysis)
