@@ -4,10 +4,15 @@
 
  - Wire type
  - Render Wires (check for port facing down) ELSE NO
- - Radiused corners
+ - Rounded corners
+   - 2 standalone functions, `renderRISegList` and `renderRISegAndCorner`
+   - Can be easily swapped in place of `List.map renderSegment` within `singleWireView, renderWireSegmentList`
+   - Renders only necessary segments, ignoring 0 length segments, either because they are covered by the rounded corners or are 0 length originally
+   - Does not impact underlying position and click detection
  - Autorouting
  - Partial Autorouting (almost fine -> not working when input/output are at top/bottom)
- - No wire jumps because of radiused corners
+ - No wire jumps because of rounded corners
+   - Code for calculating jumps on wire move can be disabled when rounded corners are enabled, possible performance improvement
  - Drag Segments NO
 
 ## Symbol
