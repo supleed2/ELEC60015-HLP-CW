@@ -594,7 +594,7 @@ let convertVerticesToASegs connId (isLeftToRight: bool) routetype rotation (yref
             | Oppositeside->
                 match index with
                     | 0 | 6 -> false
-                    | 1 | 5 ->  isLeftToRight 
+                    | 1 | 5 -> isLeftToRight 
                     | _ -> true
             | Sameside-> 
                 match index with
@@ -644,7 +644,6 @@ let convertVerticesToASegs connId (isLeftToRight: bool) routetype rotation (yref
                     ManualRoute = false
                 })
         |> List.map aSegToRISeg
-        |> List.map ppRISeg
         |> List.map (
             fun risegs->
             {
@@ -658,7 +657,6 @@ let convertVerticesToASegs connId (isLeftToRight: bool) routetype rotation (yref
                 Draggable = risegs.Draggable;
                 ManualRoute = risegs.ManualRoute
             })
-        |> List.map ppRISeg
     
     ((dummySeg,startPos),risegs')
     ||> List.scan (fun start_resSeg currSeg->
@@ -1331,6 +1329,13 @@ let getSafeDistanceForMove
         (lastSegment: ASeg)
         (distance: float) =
 
+    let controlSegOri = 
+        match firstSegment.Dir,lastSegment.Dir,testSegment.Dir with
+        | Horizontal, Horizontal, _ ->Vertical
+        | Vertical, Vertical, _ -> Horizontal
+        | _,_,Horizontal -> Horizontal
+        | _,_,Vertical -> Vertical
+
     // Stick length can be shrunk for segments which aren't at the end of their
     // wires -- so we find a value for that shrink factor here
     let shrink =
@@ -1340,14 +1345,23 @@ let getSafeDistanceForMove
 
     // With that shrink factor, we find the minimum and maximum distance from
     // the segment to the wire's start/end
-    let minimumDistance =
+    let minimumDistanceX =
         firstSegment.Start.X +
         Wire.stickLength * shrink -
-        abs testSegment.End.X
-    let maximumDistance =
+        testSegment.End.X
+    let maximumDistanceX =
         lastSegment.End.X -
         Wire.stickLength * shrink -
-        abs testSegment.Start.X
+        testSegment.Start.X
+
+    let minimumDistanceY =
+        firstSegment.Start.Y +
+        Wire.stickLength * shrink -
+        testSegment.End.Y
+    let maximumDistanceY =
+        lastSegment.End.Y -
+        Wire.stickLength * shrink -
+        testSegment.Start.Y
 
     // These helpers make the match case a little less verbose
     let positive = distance > 0.0
@@ -1356,21 +1370,36 @@ let getSafeDistanceForMove
     // Check whether a given end of the test segment is vertically close to the
     // first/last segment in the wire
     let yJoined (segment: ASeg) (point: XYPos): bool =
-        abs (abs segment.Start.Y - abs point.Y) < 0.0001
+        abs (segment.Start.Y - point.Y) > 0.0001
+
+    let xJoined (segment: ASeg) (point: XYPos): bool =
+        abs (segment.Start.X -  point.X) > 0.0001
+
+    printfn $"controlSegOri:{controlSegOri},Index:{testSegment.Index};minDistX:{minimumDistanceX};maxDistX:{maximumDistanceX}"
+    printfn $"Seg0.Start:{firstSegment.Start};Seg0.End:{firstSegment.End};Seg6.Start:{lastSegment.Start};Seg6.End:{lastSegment.End}"
 
     // I haven't spent the time to understand this match case, but it works.
     // I assume finds how much a wire section _can_ move given its position in
     // that wire.
-    match testSegment.Index with
-        | _ when testSegment.Dir = Horizontal -> distance
-        | 3 when negative && yJoined firstSegment testSegment.Start -> distance
-        | 3 when positive && yJoined lastSegment testSegment.End -> distance
-        | 1
-        | 2 -> max minimumDistance distance
-        | 4
-        | 5 -> min maximumDistance distance
-        | 3 -> distance |> max minimumDistance |> min maximumDistance
-        | _ -> distance
+    match controlSegOri with 
+    | Vertical ->
+        match testSegment.Index with
+            | _ when testSegment.Dir = Horizontal -> distance
+            | 3 when negative && yJoined firstSegment testSegment.Start -> distance
+            | 3 when positive && yJoined lastSegment testSegment.End -> distance
+            | 1 | 2 -> max minimumDistanceX distance
+            | 4 | 5 -> min maximumDistanceX distance
+            | 3 -> distance |> max minimumDistanceX |> min maximumDistanceX
+            | _ -> distance
+    | Horizontal ->
+        match testSegment.Index with
+            | _ when testSegment.Dir = Horizontal -> distance
+            | 3 when negative && xJoined firstSegment testSegment.Start -> distance
+            | 3 when positive && xJoined lastSegment testSegment.End -> distance
+            | 1 | 2 -> max minimumDistanceY distance
+            | 4 | 5 -> min maximumDistanceY distance
+            | 3 -> distance |> max minimumDistanceY |> min maximumDistanceY
+            | _ -> distance
 
 /// Remove pairs of adjacent segments which are aligned but not of the same
 /// sign
@@ -1453,13 +1482,15 @@ let moveSegment (segment: ASeg) (distance:float) (model:Model) =
             let startSegment, endSegment = wire.Segments[0], wire.Segments[6]
             getSafeDistanceForMove segment startSegment endSegment distance
 
+        printfn $"distance:{distance};moveDistance:{moveDistance}"
+
         // Get new values for the current segment, the end of the last one, and
         // the start of the next one
         let newLastEnd, newCurrentStart, newCurrentEnd, newNextStart =
 
             // Sets the X/Y value of a point along a given axis
             let setValue (point: XYPos) (value: float) (axis: Orientation) =
-                let newValue = - (abs value + moveDistance)
+                let newValue = value + moveDistance
                 match axis with
                     | Horizontal -> {point with X = newValue}
                     | Vertical -> {point with Y = newValue}
@@ -1483,6 +1514,7 @@ let moveSegment (segment: ASeg) (distance:float) (model:Model) =
         let newCurrentSegment =
             {
                 segment with
+                    ManualRoute = true
                     Start = newCurrentStart
                     End = newCurrentEnd
             }
@@ -1730,12 +1762,8 @@ let partialAutoRoute
 
     // Get the index of the last autorouted segment in the list
     let lastAutoroutedIndex =
-
-        let isNegative (position: XYPos): bool =
-            position.X < 0.0 || position.Y < 0.0
-
         let segmentAutorouted (segment: ASeg): bool =
-            not (isNegative segment.Start || isNegative segment.End)
+           segment.ManualRoute
 
         segments
         |> List.takeWhile segmentAutorouted
@@ -1817,19 +1845,6 @@ let partialAutoRoute
     |> Option.bind checkTopology
     |> Option.bind preEndScale
 
-/// Returns the new positions keeping manual coordinates negative, and auto
-/// coordinates positive
-let negXYPos (position: XYPos) (difference: XYPos): XYPos =
-
-    let newPosition = Symbol.posAdd (absXYPos position) difference
-    if position.X < 0.0 || position.Y < 0.0 then
-        {
-            X = - newPosition.X
-            Y = - newPosition.Y
-        }
-    else
-        newPosition
-
 /// Moves a wire by a specified amount by adding a XYPos to each start and end
 /// point of each segment
 let moveWire (wire : Wire) (difference : XYPos): Wire =
@@ -1837,8 +1852,9 @@ let moveWire (wire : Wire) (difference : XYPos): Wire =
     let transformer (segment: ASeg) : ASeg =
         {
             segment with
-                Start = negXYPos segment.Start difference
-                End = negXYPos segment.End difference
+                ManualRoute = segment.ManualRoute
+                Start = Symbol.posAdd segment.Start difference
+                End = Symbol.posAdd segment.End difference
         }
 
     {
