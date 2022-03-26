@@ -16,9 +16,9 @@
  - Rotation: add info
  - Mux + Adder with ports on different edges
  - Clock on custom -> NO
- - APortOffsetMap: add info
- - UI to rotate -> SHIFT+R
- - Move ports of custom (Done through properties tab)
- - Auto-align -> No 
- - Bounding box
+ - APortOffsetMap: Map which uses as key the port name and value the PortOrientationOffset which consists of the Port Side Offset from top left corner and index from list of ports on that symbol side.
+ - UI to rotate : This can be accessed by either pressing the keyboard combination SHIFT+R or accessing this through View>Rotate Symbol.
+ - Move ports of custom : This can be accessed through the Symbol properties tab and selecting the port and preferred side to be moved to. 
+ - Auto-align : Not implemented.
+ - Bounding box : Bounding box height and width was changed to take into account the rotation of the symbol. This can be seen by rotating the symbol and testing the new bouding box.
 
