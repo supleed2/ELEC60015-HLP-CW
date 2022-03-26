@@ -430,37 +430,49 @@ let initialWireVerticesFromPorts
         if (endX - startX >= Wire.stickLength) 
                 && (endY - startY >= Wire.stickLength) then
             [ 
-                {X = startX; Y = startY};
-                {X = startX + Wire.stickLength; Y = startY};
-                {X = startX + Wire.stickLength; Y = startY};
-                {X = endX; Y = startY};
-                {X = endX; Y = startY};
-                {X = endX ; Y = endY - Wire.stickLength}
-                {X = endX ; Y = endY - Wire.stickLength}
+                {X = startX; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = endX; Y = startY}
+                {X = endX; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
                 {X = endX; Y = endY}
             ], 
             true // Left-to-right
         //fix issue by wrapping wire input port and not through for 1st quadrant  
         else if (((startX + endX) / 2.0)>(startX+Wire.stickLength)) then
             [ 
-                {X = startX; Y = startY};
-                {X = startX + Wire.stickLength; Y = startY};
-                {X = startX + Wire.stickLength; Y = startY};
-                {X = (startX + endX) / 2.0; Y = startY};
-                {X = (startX + endX) / 2.0; Y = endY-Wire.stickLength};
-                {X = endX; Y = endY-Wire.stickLength};
-                {X = endX; Y = endY-Wire.stickLength};
+                {X = startX; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = (startX + endX) / 2.0; Y = startY}
+                {X = (startX + endX) / 2.0; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
                 {X = endX; Y = endY}
             ], false
-        else 
+        else if (((startY + endY) / 2.0)>(startY+Wire.stickLength)) then
             [ 
-                {X = startX; Y = startY};
-                {X = startX + Wire.stickLength; Y = startY};
-                {X = startX + Wire.stickLength; Y = startY};
-                {X = startX + Wire.stickLength; Y = startY};
-                {X = startX + Wire.stickLength; Y = endY - Wire.stickLength};
-                {X = endX; Y = endY - Wire.stickLength};
-                {X = endX; Y = endY - Wire.stickLength};
+                {X = startX; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = ((startY + endY) - Wire.stickLength) / 2.0}
+                {X = endX; Y = ((startY + endY) - Wire.stickLength) / 2.0}
+                {X = endX; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY}
+            ], 
+            false
+        else
+            [ 
+                {X = startX; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = startY}
+                {X = startX + Wire.stickLength; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
                 {X = endX; Y = endY}
             ], 
             false
@@ -479,11 +491,11 @@ let initialWireVerticesFromPorts
         if abs (endX - startX) >= Wire.stickLength * 2.0 
                 && endY >= startY then
             [ 
-                {X = startX; Y = startY};
-                {X = startX ; Y = startY - Wire.stickLength};
-                {X = startX ; Y = startY - Wire.stickLength};
-                {X = endX; Y = startY - Wire.stickLength};
-                {X = endX; Y = startY - Wire.stickLength};
+                {X = startX; Y = startY} 
+                {X = startX ; Y = startY - Wire.stickLength}
+                {X = startX ; Y = startY - Wire.stickLength}
+                {X = startX ; Y = startY - Wire.stickLength}
+                {X = endX; Y = startY - Wire.stickLength}
                 {X = endX ; Y = endY - Wire.stickLength}
                 {X = endX ; Y = endY - Wire.stickLength}
                 {X = endX; Y = endY}
@@ -499,13 +511,13 @@ let initialWireVerticesFromPorts
         // + - +      + - +
         elif abs (endX - startX) >= Wire.stickLength * 2.0 then
             [ 
-                {X = startX; Y = startY};
-                {X = startX ; Y = startY - Wire.stickLength};
-                {X = startX ; Y = endY - Wire.stickLength};
-                {X = endX; Y = endY - Wire.stickLength};
-                {X = endX; Y = endY - Wire.stickLength};
-                {X = endX ; Y = endY - Wire.stickLength}
-                {X = endX ; Y = endY - Wire.stickLength}
+                {X = startX; Y = startY}
+                {X = startX ; Y = startY - Wire.stickLength}
+                {X = startX ; Y = startY - Wire.stickLength}
+                {X = startX ; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
                 {X = endX; Y = endY}
             ], 
             true // Left-to-right
@@ -518,15 +530,27 @@ let initialWireVerticesFromPorts
         // + - +   E  or  S   + - +
         //     |   |      |   |  
         //     + - +      + - +
+        elif endY < startY then
+            [ 
+                {X = startX; Y = startY}
+                {X = startX; Y = startY - Wire.stickLength}
+                {X = startX; Y = startY - Wire.stickLength}
+                {X = startX; Y = ((startY + endY) / 2.0) - Wire.stickLength}
+                {X = endX + Wire.stickLength * 4.0; Y = ((startY + endY) / 2.0) - Wire.stickLength}
+                {X = endX + Wire.stickLength * 4.0; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY}
+            ], 
+            false // Not left-to-right
         else
             [ 
-                {X = startX; Y = startY};
-                {X = startX ; Y = startY - Wire.stickLength};
-                {X = startX ; Y = startY - Wire.stickLength};
-                {X = startX + Wire.stickLength * 4.5 ; Y = startY - Wire.stickLength};
-                {X = startX + Wire.stickLength * 4.5 ; Y = endY - Wire.stickLength};
-                {X = endX; Y = endY - Wire.stickLength};
-                {X = endX; Y = endY - Wire.stickLength};
+                {X = startX; Y = startY}
+                {X = startX ; Y = startY - Wire.stickLength}
+                {X = startX + Wire.stickLength * 4.0; Y = startY - Wire.stickLength}
+                {X = startX + Wire.stickLength * 4.0; Y = ((startY + endY) / 2.0) - Wire.stickLength}
+                {X = endX; Y = ((startY + endY) / 2.0) - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
+                {X = endX; Y = endY - Wire.stickLength}
                 {X = endX; Y = endY}
             ], 
             false // Not left-to-right
@@ -567,13 +591,13 @@ let convertVerticesToASegs connId (isLeftToRight: bool) routetype rotation (yref
         | Sameside->
             match isLeftToRight with
             | true -> 
-                [Vertical;Vertical;Horizontal;Horizontal;Vertical;Vertical;Vertical]
+                [Vertical;Horizontal;Vertical;Horizontal;Vertical;Horizontal;Vertical]
             | false -> 
-                [Vertical;Vertical;Horizontal;Vertical;Horizontal;Vertical;Vertical]
+                [Vertical;Horizontal;Vertical;Horizontal;Vertical;Horizontal;Vertical]
         | Rightangle->
             match isLeftToRight with
             | true -> 
-                [Horizontal;Horizontal;Horizontal;Horizontal;Vertical;Vertical;Vertical]
+                [Horizontal;Vertical;Horizontal;Vertical;Horizontal;Vertical;Vertical]
             | false -> 
                 [Horizontal;Vertical;Horizontal;Vertical;Horizontal;Vertical;Vertical]
 
