@@ -364,7 +364,7 @@ let initialWireVerticesFromPorts
         // Wire travelling left to right (positive X) from output port to input 
         // port
         // S - + - + - + - E
-        if endX - startX >= stickLength * 2.0 then
+        if endX - startX >= stickLength * 2.0 then  
             [ 
                 {X = startX; Y = startY}
                 {X = startX + stickLength; Y = startY};
@@ -428,7 +428,6 @@ let initialWireVerticesFromPorts
         //         E
         if (endX - startX >= Wire.stickLength) 
                 && (endY - startY >= Wire.stickLength) then
-            
             [ 
                 {X = startX; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
@@ -441,40 +440,31 @@ let initialWireVerticesFromPorts
             ], 
             true // Left-to-right
         //fix issue by wrapping wire input port and not through for 1st quadrant  
-        else if (endX - startX < Wire.stickLength)
-                && (endY - startY >= 2.5 * Wire.stickLength) then
+        else if (abs(endX - startX) < 3.0*Wire.stickLength)
+                && (endY - startY < 3.0 * Wire.stickLength) then
             [
                 {X = startX; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
-                {X = startX + Wire.stickLength; Y = (startY + endY)/2.0};
-                {X = endX; Y = (startY + endY)/2.0};
+                {X = endX + Wire.stickLength*4.5; Y = startY};
+                {X = endX + Wire.stickLength*4.5; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY}
             ], 
             false // not Left-to-right
-        // Otherwise, if either X or Y delta is smaller than the stick length,
-        // add some creative meandering
-        // 
-        // + ---- +
-        // |      |
-        // |      + - S
-        // + - +
-        //     |
-        //     E
-        else
+        else 
             [ 
                 {X = startX; Y = startY};
                 {X = startX + Wire.stickLength; Y = startY};
-                {X = startX + Wire.stickLength; Y = startY - 1.5 * Wire.stickLength};
-                {X = (startX + endX) / 2.0; Y = startY - 1.5 * Wire.stickLength};
-                {X = (startX + endX) / 2.0; Y = endY - Wire.stickLength};
+                {X = startX + Wire.stickLength; Y = startY};
+                {X = startX + Wire.stickLength; Y = endY - Wire.stickLength};
+                {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY}
             ], 
-            false // Not left-to-right
+            false
     
     // Sameside -> the two ports are facing in the same direction
     elif routetype = Sameside then
@@ -489,7 +479,6 @@ let initialWireVerticesFromPorts
         // + - +      + - +
         if abs (endX - startX) >= Wire.stickLength * 2.0 
                 && endY >= startY then
-            
             [ 
                 {X = startX; Y = startY};
                 {X = startX ; Y = startY - Wire.stickLength};
@@ -535,8 +524,8 @@ let initialWireVerticesFromPorts
                 {X = startX; Y = startY};
                 {X = startX ; Y = startY - Wire.stickLength};
                 {X = startX ; Y = startY - Wire.stickLength};
-                {X = startX + Wire.stickLength * 2.0 ; Y = startY - Wire.stickLength};
-                {X = startX + Wire.stickLength * 2.0 ; Y = endY - Wire.stickLength};
+                {X = startX + Wire.stickLength * 4.5 ; Y = startY - Wire.stickLength};
+                {X = startX + Wire.stickLength * 4.5 ; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY - Wire.stickLength};
                 {X = endX; Y = endY}
@@ -587,7 +576,7 @@ let convertVerticesToASegs connId (isLeftToRight: bool) routetype rotation (yref
             | true -> 
                 [Horizontal;Horizontal;Horizontal;Horizontal;Vertical;Vertical;Vertical]
             | false -> 
-                [Horizontal;Vertical;Horizontal;Vertical;Horizontal;Horizontal;Vertical]
+                [Horizontal;Horizontal;Vertical;Horizontal;Vertical;Horizontal;Vertical]
 
     let draggable index =
         match routetype with 
@@ -671,12 +660,6 @@ let convertVerticesToASegs connId (isLeftToRight: bool) routetype rotation (yref
     |> List.skip 1
     |> List.map (fun resSeg_start-> riSegToASeg (fst resSeg_start))
 
-// TODO: native RISeg implementation
-// let convertVerticesToRISegs connId (isLeftToRight: bool) (verticesList: XYPos list) : RISeg list =
-//     convertVerticesToASegs connId isLeftToRight verticesList
-//     |> List.map aSegToRISeg
-
-/// Convert a (possibly legacy) issie Connection stored as a list of vertices to Absolute Segments
 /// Convert a (possibly legacy) issie Connection stored as a list of vertices to Absolute Segments
 let issieVerticesToASegs connId (verticesList: list<float*float>) : ASeg list =
     let XYPosList =
@@ -699,12 +682,6 @@ let issieVerticesToASegs connId (verticesList: list<float*float>) : ASeg list =
         | _ -> // can't work out what vertices are, so default to auto-routing
             printfn "Converting unknown"
             makeNewSegmentsFromPorts XYPosList
-
-// TODO: native RISeg implementation
-/// Convert a (possibly legacy) issie Connection stored as a list of vertices to Rotation Invariant Segments
-let issieVerticesToRISegs connId (verticesList: (float * float) list) : RISeg list =
-    issieVerticesToASegs connId verticesList
-    |> List.map aSegToRISeg
 
 //----------------------interface to Issie-----------------------//
 // Section of functions that offer an interface between our implementation and Issie
@@ -811,7 +788,7 @@ let makeInitialASegList (hostId: ConnectionId)
             | Symbol.Top, Symbol.Bottom -> Oppositeside, NegX, false
             | Symbol.Top, Symbol.Left -> Rightangle, NegX, false
             
-            | Symbol.Right, Symbol.Top -> Rightangle, PosY, false //TODO: WRONG - stick coming out of output+input wrong direction 
+            | Symbol.Right, Symbol.Top -> Rightangle, PosY, false 
             | Symbol.Right, Symbol.Right -> Sameside, PosX, false
             | Symbol.Right, Symbol.Bottom -> Rightangle,NegY, true
             | Symbol.Right, Symbol.Left -> Oppositeside, PosY, false
@@ -823,7 +800,7 @@ let makeInitialASegList (hostId: ConnectionId)
 
             | Symbol.Left, Symbol.Top -> Rightangle, PosY, true
             | Symbol.Left, Symbol.Right -> Oppositeside, NegY, false
-            | Symbol.Left, Symbol.Bottom -> Rightangle, NegY, false //TODO: WRONG - stick coming out of output+input wrong direction 
+            | Symbol.Left, Symbol.Bottom -> Rightangle, NegY, false 
             | Symbol.Left, Symbol.Left -> Sameside, NegX, false
 
     // Get the adjusted input port position, applying any rotations and
@@ -835,12 +812,6 @@ let makeInitialASegList (hostId: ConnectionId)
             |> yReflect yreflect
         
         relativePos + outputPortPos
-
-    (*
-    printfn $"outputPortPos:{outputPortPos}, inputPortPos':{inputPortPos'}, inputPortPos:{inputPortPos}"
-    printfn $"inputPortOri:{inputPortOri}, outputPortOri:{outputPortOri}"
-    printfn $"routetype:{routetype}, rotation:{rotation}, yreflect:{yreflect}"
-    *)
 
     let (xyPairs: list<XYPos>), (isLeftToRight: bool) = 
         initialWireVerticesFromPorts outputPortPos inputPortPos' routetype
@@ -854,12 +825,6 @@ let makeInitialASegList (hostId: ConnectionId)
         yreflect 
         outputPortPos 
         xyPairs
-
-// TODO: native RISeg implementation
-// Initial list of rotation invariant segments based on positions of ports to be connected
-// let makeInitialRISegList (hostId: ConnectionId) (portCoords: XYPos * XYPos) : RISeg list =
-//     makeInitialASegList hostId portCoords
-//     |> List.map aSegToRISeg
 
 /// Render given Rotation Invariant Segment using colour and width properties given
 /// Takes in 2 connecting segments to add rounded corners if appropriate
@@ -1375,9 +1340,6 @@ let getSafeDistanceForMove
     let xJoined (segment: ASeg) (point: XYPos): bool =
         abs (segment.Start.X -  point.X) > 0.0001
 
-    printfn $"controlSegOri:{controlSegOri},Index:{testSegment.Index};minDistX:{minimumDistanceX};maxDistX:{maximumDistanceX}"
-    printfn $"Seg0.Start:{firstSegment.Start};Seg0.End:{firstSegment.End};Seg6.Start:{lastSegment.Start};Seg6.End:{lastSegment.End}"
-
     // I haven't spent the time to understand this match case, but it works.
     // I assume finds how much a wire section _can_ move given its position in
     // that wire.
@@ -1481,8 +1443,6 @@ let moveSegment (segment: ASeg) (distance:float) (model:Model) =
         let moveDistance =
             let startSegment, endSegment = wire.Segments[0], wire.Segments[6]
             getSafeDistanceForMove segment startSegment endSegment distance
-
-        printfn $"distance:{distance};moveDistance:{moveDistance}"
 
         // Get new values for the current segment, the end of the last one, and
         // the start of the next one
