@@ -12,13 +12,13 @@
 
 ## Symbol
 
- - New Types: add extra info (Rotation, Orientation, New Component, AportOffsetMap)
- - Rotation: add info
+ - New Types: (Rotation, PortOrientation, PortOrientationOffset, New Component -> +R + SI , AportOffsetMap)
+ - Rotation: All symbols can be rotated except for Split/MergeWire and Custom (since you can alter the ports' positions any way you like) 
  - Mux + Adder with ports on different edges
  - Clock on custom -> NO
- - APortOffsetMap: Map which uses as key the port name and value the PortOrientationOffset which consists of the Port Side Offset from top left corner and index from list of ports on that symbol side.
+ - APortOffsetMap: used for all drawing functions, for loading components, and allows easy change of ports' locations
  - UI to rotate : This can be accessed by either pressing the keyboard combination SHIFT+R or accessing this through View>Rotate Symbol.
- - Move ports of custom : This can be accessed through the Symbol properties tab and selecting the port and preferred side to be moved to. 
+ - Move ports of custom : This can be accessed through the Symbol properties tab and selecting the port and preferred side to be moved to. Also by selecting the same side a port currently is it will move it to be the first port in that side. 
  - Auto-align : Not implemented.
  - Bounding box : Bounding box height and width was changed to take into account the rotation of the symbol. This can be seen by rotating the symbol and testing the new bouding box.
 
